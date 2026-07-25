@@ -1,21 +1,29 @@
 # General Store Management System (GSMS)
 
-A Django-based General Store / mini-ERP web app: products, categories/brands/units,
-suppliers with ledger (khata), customers with ledger (khata), purchases (auto stock IN),
-sales (auto stock OUT + profit), stock adjustments, expenses/income, dashboard, and
-reports — with role-based login (Admin / Manager / Cashier).
+A Django-based General Store / mini-ERP web app: products (with barcodes, multi
+price levels, Excel import/export), multi-warehouse inventory with FIFO batch
+tracking, suppliers & customers with running ledgers, purchase orders →
+purchases → purchase returns, sales → sales returns, PDF invoices (with
+shareable public links and email delivery), a real double-entry finance ledger
+with cash registers and day-closing, notifications, a full audit trail, and
+20+ reports — with role-based login (Admin / Manager / Cashier).
 
-This build covers the **core / Phase-1 blueprint**. Advanced Enterprise-v2 ideas
-(FIFO batch-wise inventory, multi-warehouse, multi-branch, barcode scanning, audit
-log UI, automatic backup) are **not** included yet — see "What's not included" below
-for how the code is structured so these can be added later without a rewrite.
+## 1. Tech stack
 
-## 1. Requirements
+- Python / Django 5.x
+- SQLite by default — PostgreSQL in production (set `DB_ENGINE=postgresql`, see `.env.example`)
+- Bootstrap 5 + Bootstrap Icons (via CDN, no local build step/bundler needed)
+- `python-barcode` (Code128 barcode label generation)
+- `openpyxl` (product Excel import/export)
+- `xhtml2pdf` (PDF invoice generation)
+
+## 2. Requirements
 
 - Python 3.10+ (3.12 recommended)
 - pip
+- PostgreSQL (optional — only needed if you set `DB_ENGINE=postgresql`; SQLite needs nothing extra)
 
-## 2. Setup (run these on your own machine / server — this was NOT run for you in this session)
+## 3. Setup
 
 ```bash
 cd gsms
@@ -27,6 +35,9 @@ source venv/bin/activate        # on Windows: venv\Scripts\activate
 # install dependencies
 pip install -r requirements.txt
 
+# copy the environment template and fill in real values
+cp .env.example .env            # on Windows: copy .env.example .env
+
 # create the database tables
 python manage.py makemigrations
 python manage.py migrate
@@ -34,7 +45,9 @@ python manage.py migrate
 # OPTION A: quick start with demo data + a ready-made admin login
 python manage.py seed_demo
 # -> creates username: admin / password: admin123  (role = Admin)
-#    plus sample categories, brands, units, 4 demo products, 1 supplier, 1 customer
+#    plus sample categories, brands, units, 4 demo products (one low-stock,
+#    one already-expired), 1 supplier, 1 customer, and matching ledger/GL entries
+#    (requires a default Warehouse to already exist — create one via /admin/ first)
 
 # OPTION B: create your own admin user manually instead
 python manage.py createsuperuser
@@ -48,79 +61,104 @@ Open **http://127.0.0.1:8000/** in your browser and log in.
 
 Django admin panel (for direct DB editing / power users) is at **/admin/**.
 
-## 3. Roles & permissions
+### Environment variables (`.env`)
+
+| Variable               | Purpose                                                        |
+|-------------------------|-----------------------------------------------------------------|
+| `DJANGO_SECRET_KEY`    | Django's secret key — generate a real random one for production |
+| `DJANGO_DEBUG`         | `True`/`False` — must be `False` in production                  |
+| `DJANGO_ALLOWED_HOSTS` | Comma-separated hostnames the site is served from                |
+| `DB_ENGINE`            | Leave unset for SQLite (default); set to `postgresql` to use Postgres |
+| `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` | PostgreSQL connection details (only used when `DB_ENGINE=postgresql`) |
+
+## 4. Roles & permissions
+
+Exactly three roles (`accounts.User.Role`):
 
 | Role     | Access                                                              |
 |----------|----------------------------------------------------------------------|
 | Admin    | Everything, including Users and Store Settings                     |
-| Manager  | Products, Suppliers, Purchases, Customers, Sales, Inventory, Reports, Expenses/Income |
-| Cashier  | Sales entry, Customer payments, viewing lists (no add/edit on masters) |
+| Manager  | Products, Suppliers, Purchases, Customers, Sales, Inventory, Reports, Finance |
+| Cashier  | Sales entry, payments, viewing lists (no add/edit on masters)       |
 
-Create additional users from **Users** in the sidebar (Admin only), or via `/admin/`.
+A user can also be pinned to one `Warehouse` (branch) via `accounts.User.branch`;
+leaving it blank gives access across all warehouses. Create additional users
+from **Users** in the sidebar (Admin only), or via `/admin/`.
 
-## 4. Modules included
+## 5. Apps / modules
 
-- **accounts** — custom User model with role field, login/logout, role decorators
-- **core** — shared base template, sidebar navigation, styling
-- **dashboard** — today's sales/profit/purchases, cash in hand, low stock, expired,
-  near-expiry, recent sales/purchases
-- **products** — Category, Brand, Unit, Product (barcode/SKU fields, expiry, min stock)
+- **accounts** — custom `User` model (role + branch fields), login/logout, role decorators
+- **core** — shared base template, sidebar/topbar, notification-bell context processor, PDF renderer (`core/pdf.py`), email helper (`core/mail.py`)
+- **dashboard** — today's sales/profit/purchases, cash in hand, low stock, expired, near-expiry, recent sales/purchases
+- **products** — Category, Brand, Unit, Product (barcode, SKU, expiry, min stock, tax), ProductImage gallery, ProductBarcode (extra scan codes), ProductPrice (multi price-level pricing); printable barcode labels; Excel import/export
+- **masters** — shared lookup tables: Tax and PriceLevel (actively used by products), plus PaymentMethod, Branch, ExpenseCategory, IncomeCategory, CustomerType, SupplierType (admin-editable now, not yet wired into other apps' workflows)
 - **suppliers** — Supplier + auto-generated ledger (khata) + payment recording
 - **customers** — Customer + auto-generated ledger (khata) + payment recording
-- **purchases** — Purchase + multi-item form → auto increases product stock, updates
-  supplier ledger (debit for invoice total, credit for amount paid)
-- **sales** — Sale + multi-item form → validates available stock, decreases stock,
-  calculates per-item profit (selling price − purchase price), updates customer
-  ledger for credit sales
-- **inventory** — Stock Adjustment (damage / lost / returned / manual correction),
-  increases or decreases product stock directly
-- **finance** — Expenses and Income
-- **reports** — Sales, Purchases, Profit, Expenses, Stock, Expiry, Low Stock,
-  Top Selling Products, Customer Balance, Supplier Balance, Cash Flow (most with a
-  date-range filter)
-- **settings_app** — Store name, owner, phone, address, logo, invoice footer,
-  tax %, currency (single settings record used across the app, e.g. in the sidebar title)
+- **inventory** — Warehouse, ProductBatch (FIFO/FEFO costing), BatchStock/WarehouseStock, StockTransfer between warehouses, StockAdjustment, and a full InventoryTransaction movement log
+- **purchases** — optional PurchaseOrder draft workflow → Purchase (multi-item invoice, auto stock IN via batches, updates supplier ledger) → PurchaseReturn
+- **sales** — Sale (multi-item invoice, FIFO batch allocation, auto stock OUT, per-item profit, updates customer ledger) → SalesReturn (restocks "good" condition items); PDF invoice, a public shareable invoice link, and email-invoice delivery
+- **finance** — chart of Accounts, double-entry BusinessTransaction/LedgerEntry ledger, Payment (with multi-invoice allocation via the `payments` app), Expense, Income, CashRegister/CashTransaction, DayClosing (cash-drawer reconciliation)
+- **payments** — PaymentAllocation: splits one Payment across multiple outstanding Sale/Purchase invoices
+- **notifications** — in-app alerts (low stock, expired, near-expiry, customer due, supplier due) with a topbar bell + badge, refreshed on each dashboard/notifications-page visit
+- **audit** — append-only AuditLog (who did what, when) written explicitly from accounts, inventory, finance, sales, and purchases actions (logins, price changes, stock adjustments/transfers, payments, returns, cancellations, day-closing, role changes)
+- **reports** — 20 report views (see below), most with a date-range filter
+- **settings_app** — Store name, owner, phone, address, logo, invoice footer, tax %, currency (single settings record used across the app, e.g. sidebar title, emailed invoices)
 
-## 5. Business logic notes (how the automation works)
+## 6. Reports
 
-- **Purchase saved** → for every line item: `product.stock += quantity`,
-  `product.purchase_price` is refreshed to the latest cost, and if an expiry date
-  was entered it's copied onto the product. The **supplier ledger** gets a debit
-  entry for the invoice total, and a credit entry if any amount was paid immediately.
+All under `/reports/`: overview, Sales, Purchases, Profit, Expenses, Stock,
+Expiry, Low Stock, Top Selling, Least Selling, Customer Balance, Supplier
+Balance, Payment Collection, Cash Flow, Stock Movement, Inventory Valuation,
+ABC Analysis, Dead Stock, Account Reconciliation, and a combined Udhaar
+(customer receivables + supplier payables) ledger hub. Reports render as HTML
+only — no Excel/PDF export in this app (Excel export lives in **products**,
+PDF export lives in the **sales**/**purchases** invoices).
+
+## 7. Business logic notes (how the automation works)
+
+- **Purchase saved** → for every line item, stock is received into a
+  `ProductBatch` (FIFO cost basis) and `WarehouseStock`/`BatchStock` are
+  updated; `product.purchase_price` is refreshed to the latest cost. The
+  **supplier ledger** gets a debit entry for the invoice total, and a credit
+  entry if any amount was paid immediately.
 - **Sale saved** → stock availability is checked first (blocks the sale if
-  insufficient); for every line item `product.stock -= quantity`; profit per item
-  is `(selling_price − purchase_price) × quantity`. The **customer ledger** gets a
-  debit entry for the invoice total (if a customer is attached) and a credit entry
-  if any amount was paid immediately.
-- **Stock Adjustment saved** → directly increases or decreases `product.stock`,
-  recorded with a reason (damage/lost/returned/manual correction).
-- Ledgers are **never edited directly** — only generated from purchases, sales, and
-  payment actions, matching the "ledger should not be hand-edited" principle from
-  your blueprint.
+  insufficient); stock is deducted batch-by-batch (oldest/FIFO first) via
+  `BatchAllocation`, capturing the true cost of goods sold for accurate
+  profit. The **customer ledger** gets a debit entry for the invoice total
+  (if a customer is attached) and a credit entry if any amount was paid
+  immediately.
+- **Sales/Purchase Return saved** → restocks "good" condition items back into
+  their originating batch (via allocations) and reverses the relevant ledger
+  entry; damaged/expired returns adjust stock without restocking sellable
+  inventory.
+- **Stock Adjustment / Stock Transfer saved** → directly changes
+  `WarehouseStock`/`BatchStock` with a recorded reason, and logs an
+  `InventoryTransaction` movement row plus an audit-log entry.
+- **Payment recorded** → posted to the double-entry ledger (`finance.services.post_transaction`)
+  and, when it covers more than one invoice, split via `payments.PaymentAllocation`.
+- Ledgers are **never edited directly** — only generated from purchases,
+  sales, returns, and payment actions; the double-entry ledger is
+  append-only and posted only through `finance.services`.
 
-## 6. What's not included yet (roadmap / easy to add later)
+## 8. What's defined but not yet fully wired up
 
-These were in the "Enterprise v2" blueprint but are out of scope for this first
-build, since each is realistically its own mini-project:
+- `masters.PaymentMethod`, `Branch`, `ExpenseCategory`, `IncomeCategory`,
+  `CustomerType`, `SupplierType` — models and admin screens exist, but no
+  other app references them yet (e.g. Expense/Income have no category FK
+  yet; `inventory.Warehouse` is what's actually used for branches today).
+- `products.ProductVariant` — model exists, explicitly reserved for future
+  use; not connected to batches, stock, sales, or purchases yet.
+- No dedicated Excel/PDF export inside the **reports** app itself.
+- No Dockerfile/docker-compose, no LICENSE file, no CI config yet.
 
-- FIFO batch-wise inventory (currently: simple single running stock number per product)
-- Multi-warehouse / multi-branch / multi-cash-counter support
-- Purchase Return / Sales Return workflows
-- Barcode generation, printing, and scanner input
-- SMS/WhatsApp/Email invoice sharing
-- Dashboard charts (Chart.js can be dropped into the dashboard template easily)
-- Excel import/export
-- Full Audit Log UI (Django admin's built-in history covers some of this already)
-- Scheduled automatic database backup (manual export: `python manage.py dumpdata > backup.json`)
-- Multi-payment-method-per-invoice (cash + bank + JazzCash split on one invoice)
+## 9. Tests
 
-The apps are already separated the way your blueprint asked (`purchases`, `sales`,
-`inventory`, etc.), so each of the above can be added as new fields/models inside
-its matching app without restructuring the project.
+Every business app ships real tests (not stubs) — run the full suite with:
 
-## 7. Important — this was not run/tested in a live server
+```bash
+python manage.py test
+```
 
-This code was written directly (not scaffolded and executed) because the sandbox
-that built it has no internet access to install Django. Please run the setup steps
-above yourself. If you hit any errors when running `migrate` or `runserver`, send
-me the exact error message and I'll fix it.
+Notable coverage: `finance/test_udhaar.py` (customer/supplier ledger
+behavior), `payments/tests.py` (multi-invoice payment allocation),
+`accounts/tests.py` (role and branch-restriction checks).
