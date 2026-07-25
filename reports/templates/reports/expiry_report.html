@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Expiry Report{% endblock %}
+{% block content %}
+<h3>Expiry Report</h3>
+<p class="text-muted">Batch-level, across all warehouses — a product with several batches shows each one, not just the latest.</p>
+<div class="card card-stat p-3">
+<table class="table">
+<thead><tr><th>Product</th><th>Batch</th><th>Warehouse</th><th>Qty</th><th>Expiry Date</th><th>Days Left</th><th>Status</th></tr></thead>
+<tbody>
+{% for r in rows %}
+<tr class="{% if r.bucket == 'Expired' %}table-danger{% elif r.bucket == '7 Days' %}table-danger{% elif r.bucket == '15 Days' or r.bucket == '30 Days' %}table-warning{% endif %}">
+  <td>{{ r.product.name }}</td>
+  <td>{{ r.batch.batch_number|default:r.batch.pk }}</td>
+  <td>{{ r.warehouse.name }}</td>
+  <td>{{ r.quantity }}</td>
+  <td>{{ r.expiry_date }}</td>
+  <td>{{ r.days }}</td>
+  <td>
+    {% if r.bucket == 'Expired' %}<span class="badge bg-danger">Expired</span>
+    {% elif r.bucket == '7 Days' %}<span class="badge bg-danger">≤ 7 Days</span>
+    {% elif r.bucket == '15 Days' %}<span class="badge bg-warning text-dark">≤ 15 Days</span>
+    {% elif r.bucket == '30 Days' %}<span class="badge bg-warning text-dark">≤ 30 Days</span>
+    {% else %}<span class="badge bg-success">OK</span>{% endif %}
+  </td>
+</tr>
+{% empty %}<tr><td colspan="7" class="text-center text-muted">No batches with an expiry date in stock.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

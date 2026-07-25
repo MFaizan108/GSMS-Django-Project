@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}New Purchase Return{% endblock %}
+{% block content %}
+<h3>New Purchase Return — Purchase #{{ purchase.invoice_no }}</h3>
+<form method="post">
+  {% csrf_token %}
+  <div class="card card-stat p-4 mb-3">
+    <div class="row">
+    {% for field in form %}
+      <div class="col-md-4 mb-3">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    </div>
+  </div>
+
+  <div class="card card-stat p-4 mb-3">
+    <h5>Items</h5>
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}<div class="text-danger">{{ formset.non_form_errors }}</div>{% endif %}
+    <table class="table">
+      <thead><tr><th>Purchased Item</th><th>Return Qty</th><th>Delete</th></tr></thead>
+      <tbody>
+      {% for f in formset %}
+        <tr>
+          <td>{{ f.id }}{{ f.purchase_item }}{% if f.purchase_item.errors %}<div class="text-danger small">{{ f.purchase_item.errors }}</div>{% endif %}</td>
+          <td>{{ f.quantity }}</td>
+          <td>{% if f.instance.pk %}{{ f.DELETE }}{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="form-text">Can only return quantity still physically in stock for that batch (not yet sold or transferred elsewhere).</p>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Save Return</button>
+</form>
+{% endblock %}

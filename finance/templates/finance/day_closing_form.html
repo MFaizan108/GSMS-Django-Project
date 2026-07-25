@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Day Closing{% endblock %}
+{% block content %}
+<h3>Day Closing</h3>
+<div class="card card-stat p-4" style="max-width:500px;">
+<form method="post">
+  {% csrf_token %}
+  {% for field in form %}
+    <div class="mb-3">
+      <label class="form-label">{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+    </div>
+  {% endfor %}
+  <p class="form-text">Cash sales, customer/supplier cash payments, cash purchases, and cash expenses for the date are computed automatically from the ledger.</p>
+  <button type="submit" class="btn btn-primary">Close Day</button>
+</form>
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Sales Report{% endblock %}
+{% block content %}
+<h3>Sales Report</h3>
+{% include "reports/_date_filter.html" %}
+<div class="card card-stat p-3 mb-3"><strong>Total Sales: {{ total }}</strong> {% if user.is_manager %}&nbsp; <strong class="text-success">Total Profit: {{ profit }}</strong>{% endif %}</div>
+<div class="card card-stat p-3">
+<table class="table"><thead><tr><th>Invoice</th><th>Customer</th><th>Date</th><th>Total</th><th>Paid</th><th>Type</th></tr></thead>
+<tbody>{% for s in sales %}<tr><td>{{ s.invoice_no }}</td><td>{{ s.customer|default:"Walk-in" }}</td><td>{{ s.date }}</td><td>{{ s.total }}</td><td>{{ s.paid }}</td><td>{{ s.get_payment_type_display }}</td></tr>
+{% empty %}<tr><td colspan="6" class="text-center text-muted">No sales in this period.</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Allocate Payment — {{ supplier.name }}{% endblock %}
+{% block content %}
+<h3>Allocate Payment — {{ supplier.name }}</h3>
+<p class="text-muted">Record one payment and split it across this supplier's outstanding purchase invoices.</p>
+<form method="post">
+  {% csrf_token %}
+  {{ formset.management_form }}
+  <div class="card card-stat p-3 mb-3">
+    <div class="row">
+    {% for field in header_form %}
+      <div class="col-md-4 mb-2">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    </div>
+  </div>
+  <div class="card card-stat p-3">
+    <table class="table">
+      <thead><tr><th>Invoice</th><th>Date</th><th>Total</th><th>Remaining</th><th>Amount to Apply</th></tr></thead>
+      <tbody>
+      {% for purchase, form in rows %}
+        <tr>
+          <td>{{ purchase.invoice_no }}</td>
+          <td>{{ purchase.date }}</td>
+          <td>{{ purchase.total }}</td>
+          <td>{{ purchase.remaining }}</td>
+          <td>{{ form.invoice_id }}{{ form.amount }}</td>
+        </tr>
+      {% empty %}<tr><td colspan="5" class="text-center text-muted">No outstanding invoices for this supplier.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <button type="submit" class="btn btn-primary mt-3">Save Allocation</button>
+</form>
+{% endblock %}

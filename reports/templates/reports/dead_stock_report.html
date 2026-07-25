@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Dead Stock Report{% endblock %}
+{% block content %}
+<h3>Dead Stock Report</h3>
+<form method="get" class="row g-2 mb-3 align-items-end">
+  <div class="col-auto"><label class="form-label mb-0">No sales in last (days)</label><input type="number" name="days" value="{{ days }}" class="form-control" style="width:120px;"></div>
+  <div class="col-auto"><button type="submit" class="btn btn-primary">Filter</button></div>
+</form>
+<div class="card card-stat p-3">
+<table class="table"><thead><tr><th>Product</th><th>Category</th><th>Stock</th><th>Purchase Price</th><th>Stock Value</th></tr></thead>
+<tbody>{% for p in products %}
+<tr><td>{{ p.name }}</td><td>{{ p.category|default:"-" }}</td><td>{{ p.stock }}</td><td>{{ p.purchase_price }}</td><td>{{ p.stock|floatformat:2 }}</td></tr>
+{% empty %}<tr><td colspan="5" class="text-center text-muted">No dead stock — everything's moving.</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endblock %}

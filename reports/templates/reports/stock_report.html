@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Stock Report{% endblock %}
+{% block content %}
+<h3>Stock Report</h3>
+<div class="card card-stat p-3">
+<table class="table"><thead><tr><th>Product</th><th>Category</th><th>Stock</th><th>Unit</th><th>Purchase Price</th><th>Selling Price</th><th>Stock Value</th></tr></thead>
+<tbody>{% for p in products %}<tr><td>{{ p.name }}</td><td>{{ p.category|default:"-" }}</td><td>{{ p.stock }}</td><td>{{ p.unit|default:"-" }}</td><td>{{ p.purchase_price }}</td><td>{{ p.selling_price }}</td><td>{{ p.stock|floatformat:2 }}</td></tr>
+{% empty %}<tr><td colspan="7" class="text-center text-muted">No products.</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endblock %}

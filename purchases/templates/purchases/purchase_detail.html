@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Purchase {{ purchase.invoice_no }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 no-print">
+  <h3 class="mb-0">Purchase Invoice #{{ purchase.invoice_no }}
+    {% if purchase.status == 'cancelled' %}<span class="badge bg-secondary align-middle">Cancelled</span>{% endif %}
+  </h3>
+  <div class="d-flex gap-2">
+    {% if can_return %}
+    <a href="{% url 'purchases:purchase_return_create' purchase.pk %}" class="btn btn-outline-warning btn-sm"><i class="bi bi-arrow-return-left"></i> Return Items</a>
+    {% endif %}
+    {% if can_cancel and user.is_manager %}
+    <form method="post" action="{% url 'purchases:purchase_cancel' purchase.pk %}" onsubmit="return confirm('Cancel Purchase #{{ purchase.invoice_no }}? Stock will be reversed out and the ledger reversed. This cannot be undone.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-x-circle"></i> Cancel Invoice</button>
+    </form>
+    {% endif %}
+    <a href="{% url 'purchases:purchase_invoice_pdf' purchase.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+    <button type="button" class="btn btn-primary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+  </div>
+</div>
+<div class="card card-stat p-3 mb-3">
+  <p><strong>Supplier:</strong> {{ purchase.supplier }} | <strong>Warehouse:</strong> {{ purchase.warehouse }} | <strong>Date:</strong> {{ purchase.date }}</p>
+</div>
+<div class="card card-stat p-3 mb-3">
+<table class="table">
+<thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Batch</th><th>Expiry</th><th>Total</th></tr></thead>
+<tbody>
+{% for i in purchase.items.all %}
+<tr><td>{{ i.product }}</td><td>{{ i.quantity }}</td><td>{{ i.purchase_price }}</td><td>{{ i.batch.batch_number|default:"-" }}</td><td>{{ i.expiry_date|default:"-" }}</td><td>{{ i.line_total }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+<div class="card card-stat p-3 mb-3" style="max-width:400px;">
+  <p>Subtotal: {{ purchase.subtotal }}</p>
+  <p>Discount: {{ purchase.discount }}</p>
+  <p>Tax: {{ purchase.tax }}</p>
+  <p><strong>Total: {{ purchase.total }}</strong></p>
+  <p>Paid: {{ purchase.paid }}</p>
+  <p>Remaining: {{ purchase.remaining }}</p>
+</div>
+<div class="card card-stat p-3 no-print" style="max-width:500px;">
+  <h6>Payments</h6>
+  <table class="table table-sm">
+    <thead><tr><th>Date</th><th>Account</th><th>Amount</th></tr></thead>
+    <tbody>
+    {% for p in purchase.payments.all %}
+      <tr><td>{{ p.date }}</td><td>{{ p.account.name }}</td><td>{{ p.amount }}</td></tr>
+    {% empty %}<tr><td colspan="3" class="text-center text-muted">No payments yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  {% if purchase.remaining > 0 %}
+  <form method="post" action="{% url 'purchases:purchase_add_payment' purchase.pk %}" class="mt-2 pt-2 border-top">
+    {% csrf_token %}
+    <div class="row g-2">
+      {% for field in payment_form %}
+        <div class="col-6">
+          <label class="form-label small text-muted mb-1">{{ field.label }}</label>
+          {{ field }}
+        </div>
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn btn-success btn-sm mt-2">Record Payment</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if purchase.returns.all %}
+<div class="card card-stat p-3 mt-3" style="max-width:500px;">
+  <h6>Returns</h6>
+  <table class="table table-sm">
+    <thead><tr><th>Return #</th><th>Date</th><th>Value</th></tr></thead>
+    <tbody>
+    {% for r in purchase.returns.all %}
+      <tr><td><a href="{% url 'purchases:purchase_return_detail' r.pk %}">{{ r.return_no }}</a></td><td>{{ r.date }}</td><td>{{ r.total_value }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

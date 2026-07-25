@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Sales Returns{% endblock %}
+{% block content %}
+<h3>Sales Returns</h3>
+<div class="card card-stat p-3">
+<table class="table table-hover align-middle">
+<thead><tr><th>Return #</th><th>Sale</th><th>Customer</th><th>Date</th><th>Refund</th></tr></thead>
+<tbody>
+{% for r in returns %}
+<tr>
+  <td><a href="{% url 'sales:sales_return_detail' r.pk %}">{{ r.return_no }}</a></td>
+  <td><a href="{% url 'sales:sale_detail' r.sale.pk %}">{{ r.sale.invoice_no }}</a></td>
+  <td>{{ r.sale.customer|default:"Walk-in" }}</td>
+  <td>{{ r.date }}</td>
+  <td>{{ r.total_refund }}</td>
+</tr>
+{% empty %}<tr><td colspan="5" class="text-center text-muted">No sales returns yet.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

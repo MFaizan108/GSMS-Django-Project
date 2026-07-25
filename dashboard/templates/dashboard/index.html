@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <h3 class="mb-0">
+    Dashboard
+    {% if not is_today %}<span class="text-muted fs-6 fw-normal">— {{ selected_date|date:"d M Y" }}</span>{% endif %}
+  </h3>
+  <form method="get" class="d-flex align-items-center gap-2">
+    <label for="dashDate" class="form-label mb-0 text-muted small">View date</label>
+    <input type="date" id="dashDate" name="date" value="{{ selected_date|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" class="form-control form-control-sm" style="width:165px;" onchange="this.form.submit()">
+    {% if not is_today %}
+    <a href="{% url 'dashboard:index' %}" class="btn btn-sm btn-outline-secondary">Today</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card card-stat p-3 border-start border-4 border-success">
+      <small class="text-muted">{% if is_today %}Today's Sales{% else %}Sales{% endif %}</small>
+      <h3>{{ todays_sales_total }}</h3>
+    </div>
+  </div>
+  {% if user.is_manager %}
+  <div class="col-md-3">
+    <div class="card card-stat p-3 border-start border-4 border-primary">
+      <small class="text-muted">{% if is_today %}Today's Profit{% else %}Profit{% endif %}</small>
+      <h3>{{ todays_profit }}</h3>
+    </div>
+  </div>
+  {% endif %}
+  <div class="col-md-3">
+    <div class="card card-stat p-3 border-start border-4 border-warning">
+      <small class="text-muted">{% if is_today %}Today's Purchases{% else %}Purchases{% endif %}</small>
+      <h3>{{ todays_purchases_total }}</h3>
+    </div>
+  </div>
+  {% if user.is_manager %}
+  <div class="col-md-3">
+    <div class="card card-stat p-3 border-start border-4 border-info">
+      <small class="text-muted">Cash in Hand {% if is_today %}(Today){% endif %}</small>
+      <h3>{{ cash_in_hand }}</h3>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card card-stat p-3 text-center">
+      <small class="text-muted">Total Customers</small>
+      <h4>{{ total_customers }}</h4>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card card-stat p-3 text-center">
+      <small class="text-muted">Total Suppliers</small>
+      <h4>{{ total_suppliers }}</h4>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card card-stat p-3 text-center">
+      <small class="text-muted">Total Products</small>
+      <h4>{{ total_products }}</h4>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card card-stat p-3 text-center">
+      <small class="text-muted">{% if is_today %}Today's Credit Sales{% else %}Credit Sales{% endif %}</small>
+      <h4>{{ todays_credit_sales }}</h4>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card card-stat p-3">
+      <h6 class="text-warning"><i class="bi bi-exclamation-triangle"></i> Low Stock Products ({{ low_stock_products|length }})</h6>
+      <ul class="list-group list-group-flush">
+        {% for p in low_stock_products|slice:":6" %}
+          <li class="list-group-item d-flex justify-content-between"><span>{{ p.name }}</span><span class="badge bg-warning text-dark">{{ p.stock }}</span></li>
+        {% empty %}<li class="list-group-item text-muted">None</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card card-stat p-3">
+      <h6 class="text-danger"><i class="bi bi-x-octagon"></i> Expired Products ({{ expired_products|length }})</h6>
+      <ul class="list-group list-group-flush">
+        {% for p in expired_products|slice:":6" %}
+          <li class="list-group-item d-flex justify-content-between"><span>{{ p.name }}</span><span class="badge bg-danger">{{ p.expiry_date }}</span></li>
+        {% empty %}<li class="list-group-item text-muted">None</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card card-stat p-3">
+      <h6 class="text-info"><i class="bi bi-clock-history"></i> Near Expiry ({{ near_expiry_products|length }})</h6>
+      <ul class="list-group list-group-flush">
+        {% for p in near_expiry_products|slice:":6" %}
+          <li class="list-group-item d-flex justify-content-between"><span>{{ p.name }}</span><span class="badge bg-info text-dark">{{ p.expiry_date }}</span></li>
+        {% empty %}<li class="list-group-item text-muted">None</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-8">
+    <div class="card card-stat p-3">
+      <h6>Sales vs Purchases — Last {{ trend_labels|length }} Days</h6>
+      <canvas id="trendChart" height="90"></canvas>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card card-stat p-3">
+      <h6>Top Selling Products (by revenue)</h6>
+      <canvas id="topProductsChart" height="90"></canvas>
+    </div>
+  </div>
+</div>
+
+{% if user.is_manager %}
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card card-stat p-3 border-start border-4 border-danger">
+      <small class="text-muted">Total Customer Receivables</small>
+      <h4>{{ total_receivables }}</h4>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card card-stat p-3 border-start border-4 border-warning">
+      <small class="text-muted">Total Supplier Payables</small>
+      <h4>{{ total_payables }}</h4>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card card-stat p-3 border-start border-4 border-secondary">
+      <small class="text-muted">Net Outstanding</small>
+      <h4>{{ net_outstanding }}</h4>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card card-stat p-3">
+      <h6><i class="bi bi-people"></i> Customers with Highest Outstanding</h6>
+      <table class="table table-sm">
+        <thead><tr><th>Customer</th><th>Outstanding</th></tr></thead>
+        <tbody>
+        {% for c in top_customers_by_outstanding %}
+          <tr><td><a href="{% url 'customers:customer_detail' c.pk %}">{{ c.name }}</a></td><td class="text-danger">{{ c.current_balance }}</td></tr>
+        {% empty %}<tr><td colspan="2" class="text-muted text-center">No outstanding receivables</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card card-stat p-3">
+      <h6><i class="bi bi-truck"></i> Suppliers with Highest Payable</h6>
+      <table class="table table-sm">
+        <thead><tr><th>Supplier</th><th>Payable</th></tr></thead>
+        <tbody>
+        {% for s in top_suppliers_by_payable %}
+          <tr><td><a href="{% url 'suppliers:supplier_detail' s.pk %}">{{ s.name }}</a></td><td class="text-warning">{{ s.current_balance }}</td></tr>
+        {% empty %}<tr><td colspan="2" class="text-muted text-center">No outstanding payables</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card card-stat p-3">
+      <h6><i class="bi bi-credit-card"></i> Recent Credit Transactions</h6>
+      <table class="table table-sm">
+        <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
+        <tbody>
+        {% for e in recent_credit_transactions %}
+          <tr><td>{{ e.transaction.date|date:"d M Y" }}</td><td>{{ e.transaction.memo }}</td><td>{{ e.amount }}</td></tr>
+        {% empty %}<tr><td colspan="3" class="text-muted text-center">No credit transactions yet</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card card-stat p-3">
+      <h6><i class="bi bi-cash-coin"></i> Recent Payments</h6>
+      <table class="table table-sm">
+        <thead><tr><th>Date</th><th>Party</th><th>Amount</th></tr></thead>
+        <tbody>
+        {% for p in recent_payments %}
+          <tr>
+            <td>{{ p.date|date:"d M Y" }}</td>
+            <td>{{ p.customer|default:p.supplier|default:"—" }}</td>
+            <td>{{ p.get_direction_display }} {{ p.amount }}</td>
+          </tr>
+        {% empty %}<tr><td colspan="3" class="text-muted text-center">No payments yet</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{{ trend_labels|json_script:"trend-labels" }}
+{{ trend_sales|json_script:"trend-sales" }}
+{{ trend_purchases|json_script:"trend-purchases" }}
+{{ top_products_labels|json_script:"top-products-labels" }}
+{{ top_products_data|json_script:"top-products-data" }}
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card card-stat p-3">
+      <h6>{% if is_today %}Recent Sales{% else %}Sales on {{ selected_date|date:"d M Y" }}{% endif %}</h6>
+      <table class="table table-sm">
+        <thead><tr><th>Invoice</th><th>Customer</th><th>Total</th></tr></thead>
+        <tbody>
+        {% for s in recent_sales %}
+          <tr><td>{{ s.invoice_no }}</td><td>{{ s.customer|default:"Walk-in" }}</td><td>{{ s.total }}</td></tr>
+        {% empty %}<tr><td colspan="3" class="text-muted text-center">No sales yet</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card card-stat p-3">
+      <h6>{% if is_today %}Recent Purchases{% else %}Purchases on {{ selected_date|date:"d M Y" }}{% endif %}</h6>
+      <table class="table table-sm">
+        <thead><tr><th>Invoice</th><th>Supplier</th><th>Total</th></tr></thead>
+        <tbody>
+        {% for p in recent_purchases %}
+          <tr><td>{{ p.invoice_no }}</td><td>{{ p.supplier }}</td><td>{{ p.total }}</td></tr>
+        {% empty %}<tr><td colspan="3" class="text-muted text-center">No purchases yet</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  const trendLabels = JSON.parse(document.getElementById('trend-labels').textContent);
+  const trendSales = JSON.parse(document.getElementById('trend-sales').textContent);
+  const trendPurchases = JSON.parse(document.getElementById('trend-purchases').textContent);
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: trendLabels,
+      datasets: [
+        { label: 'Sales', data: trendSales, borderColor: '#198754', backgroundColor: 'rgba(25,135,84,0.1)', tension: 0.3 },
+        { label: 'Purchases', data: trendPurchases, borderColor: '#fd7e14', backgroundColor: 'rgba(253,126,20,0.1)', tension: 0.3 },
+      ],
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true } } },
+  });
+
+  const topProductsLabels = JSON.parse(document.getElementById('top-products-labels').textContent);
+  const topProductsData = JSON.parse(document.getElementById('top-products-data').textContent);
+  new Chart(document.getElementById('topProductsChart'), {
+    type: 'doughnut',
+    data: {
+      labels: topProductsLabels.length ? topProductsLabels : ['No sales yet'],
+      datasets: [{ data: topProductsData.length ? topProductsData : [1], backgroundColor: ['#0d6efd', '#198754', '#fd7e14', '#dc3545', '#6f42c1'] }],
+    },
+    options: { responsive: true },
+  });
+</script>
+{% endblock %}

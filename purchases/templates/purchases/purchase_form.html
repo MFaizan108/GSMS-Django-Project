@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}New Purchase{% endblock %}
+{% block content %}
+<h3>New Purchase</h3>
+{% if from_po %}
+<div class="alert alert-info">Creating this purchase from Purchase Order #{{ from_po.order_no }}. Items below are pre-filled from the order's pending quantities.</div>
+{% endif %}
+<form method="post">
+  {% csrf_token %}
+  {% if from_po %}<input type="hidden" name="from_po" value="{{ from_po.pk }}">{% endif %}
+  <div class="card card-stat p-4 mb-3">
+    <div class="row">
+    {% for field in form %}
+      <div class="col-md-4 mb-3">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    </div>
+  </div>
+
+  <div class="card card-stat p-4 mb-3">
+    <h5>Items</h5>
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}<div class="text-danger">{{ formset.non_form_errors }}</div>{% endif %}
+    <table class="table" id="item-table">
+      <thead><tr><th>Product</th><th>Qty</th><th>Purchase Price</th><th>Batch # (optional)</th><th>Expiry Date</th><th>Delete</th></tr></thead>
+      <tbody id="item-body">
+      {% for f in formset %}
+        <tr class="item-row">
+          <td>{{ f.id }}{{ f.purchase_order_item_id }}{{ f.product }}</td>
+          <td>{{ f.quantity }}</td>
+          <td>{{ f.purchase_price }}</td>
+          <td>{{ f.batch_number }}</td>
+          <td>{{ f.expiry_date }}</td>
+          <td>{% if f.instance.pk %}{{ f.DELETE }}{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <button type="button" id="add-row" class="btn btn-outline-secondary btn-sm">+ Add Row</button>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Save Purchase</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('add-row').addEventListener('click', function () {
+  const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+  const idx = parseInt(totalForms.value);
+  const rows = document.querySelectorAll('#item-body .item-row');
+  const lastRow = rows[rows.length - 1];
+  const newRow = lastRow.cloneNode(true);
+  newRow.innerHTML = newRow.innerHTML.replace(/items-(\d+)-/g, 'items-' + idx + '-');
+  newRow.querySelectorAll('input').forEach(el => { if (el.type !== 'checkbox') el.value = ''; else el.checked = false; });
+  document.getElementById('item-body').appendChild(newRow);
+  totalForms.value = idx + 1;
+});
+</script>
+{% endblock %}

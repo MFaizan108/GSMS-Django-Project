@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">Notifications</h3>
+  <form method="post" action="{% url 'notifications:notification_mark_all_read' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-secondary btn-sm">Mark all read</button>
+  </form>
+</div>
+<div class="card card-stat p-3">
+<table class="table table-hover align-middle">
+<thead><tr><th>Type</th><th>Title</th><th>Message</th><th>When</th><th></th></tr></thead>
+<tbody>
+{% for n in notifications %}
+<tr class="{% if not n.is_read %}fw-semibold{% endif %}">
+  <td>
+    {% if n.level == 'danger' %}<span class="badge bg-danger">{{ n.get_type_display }}</span>
+    {% elif n.level == 'warning' %}<span class="badge bg-warning text-dark">{{ n.get_type_display }}</span>
+    {% else %}<span class="badge bg-info text-dark">{{ n.get_type_display }}</span>{% endif %}
+  </td>
+  <td>{% if n.link %}<a href="{{ n.link }}">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}</td>
+  <td>{{ n.message }}</td>
+  <td>{{ n.created_at|date:"d M Y H:i" }}</td>
+  <td>
+    {% if not n.is_read %}
+    <form method="post" action="{% url 'notifications:notification_mark_read' n.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-secondary">Mark read</button>
+    </form>
+    {% endif %}
+  </td>
+</tr>
+{% empty %}<tr><td colspan="5" class="text-center text-muted">No notifications right now.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

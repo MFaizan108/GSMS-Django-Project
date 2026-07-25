@@ -1,0 +1,590 @@
+{% extends "base.html" %}
+{% block title %}New Sale{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">New Sale</h3>
+  <a href="{% url 'sales:sale_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Sales</a>
+</div>
+
+{% if form.non_field_errors or formset.non_form_errors %}
+<div class="alert alert-danger">{{ form.non_field_errors }}{{ formset.non_form_errors }}</div>
+{% endif %}
+
+<form method="post" id="saleForm" novalidate>
+  {% csrf_token %}
+  {{ formset.management_form }}
+  <input type="hidden" name="customer" id="hiddenCustomer" value="{{ form.customer.value|default_if_none:'' }}">
+  <div id="itemInputs"></div>
+
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <!-- Customer -->
+      <div class="card card-stat p-3 mb-3">
+        <h6 class="mb-2"><i class="bi bi-person"></i> Customer</h6>
+
+        <div id="customerChip" class="customer-chip d-none mb-2">
+          <div>
+            <strong id="chipName"></strong>
+            <div class="text-muted small" id="chipMeta"></div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-danger" id="clearCustomer">Remove</button>
+        </div>
+
+        <div id="dueCollectBox" class="due-box d-none mb-2 p-2">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="text-danger small fw-semibold">Purana Baqaya: <span id="dueAmount">0.00</span></div>
+            <div class="d-flex gap-1">
+              <input type="number" id="dueCollectInput" class="form-control form-control-sm" style="width:110px;" step="0.01" min="0.01">
+              <button type="button" id="dueCollectBtn" class="btn btn-sm btn-success">Wasool Karein</button>
+            </div>
+          </div>
+          <div class="small text-success mt-1 d-none" id="dueCollectMsg"></div>
+          <div class="small text-danger mt-1 d-none" id="dueCollectError"></div>
+        </div>
+
+        <div id="customerSearchWrap">
+          <div class="position-relative">
+            <input type="text" id="customerSearch" class="form-control" placeholder="Naam ya phone number se search karein…" autocomplete="off">
+            <div id="customerResults" class="search-dropdown d-none"></div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mt-2">
+            <span class="form-text mb-0">Koi select na karein to Walk-in Customer (cash sale) chalega.</span>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="showNewCustomer"><i class="bi bi-plus-lg"></i> Naya Customer</button>
+          </div>
+        </div>
+
+        <div id="newCustomerForm" class="d-none mt-2 p-3 border rounded">
+          <div class="row g-2 align-items-start">
+            <div class="col-md-5"><input type="text" id="ncName" class="form-control form-control-sm" placeholder="Customer ka naam"></div>
+            <div class="col-md-4"><input type="text" id="ncPhone" class="form-control form-control-sm" placeholder="Phone number"></div>
+            <div class="col-md-3 d-flex gap-1">
+              <button type="button" id="ncSave" class="btn btn-primary btn-sm flex-grow-1">Add & Select</button>
+              <button type="button" id="ncCancel" class="btn btn-outline-secondary btn-sm">Cancel</button>
+            </div>
+          </div>
+          <div class="small text-danger mt-1 d-none" id="ncError"></div>
+        </div>
+      </div>
+
+      <!-- Product search + bill -->
+      <div class="card card-stat p-3 mb-3">
+        <h6 class="mb-2"><i class="bi bi-upc-scan"></i> Add Product</h6>
+        <div class="position-relative mb-3">
+          <input type="text" id="productSearch" class="form-control" placeholder="Product ka naam ya barcode type karein, Enter dabayein…" autocomplete="off">
+          <div id="productResults" class="search-dropdown d-none"></div>
+        </div>
+
+        <div class="table-responsive">
+        <table class="table align-middle" id="billTable">
+          <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th><th></th></tr></thead>
+          <tbody id="billBody">
+            <tr id="emptyRow"><td colspan="5" class="text-center text-muted py-4">Abhi tak koi item add nahi hua.</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card card-stat p-3 mb-3">
+        <h6 class="mb-3">Invoice Details</h6>
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1">Invoice No.</label>
+          {{ form.invoice_no }}
+          {% if form.invoice_no.errors %}<div class="text-danger small">{{ form.invoice_no.errors }}</div>{% endif %}
+        </div>
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1">Date</label>
+          {{ form.date }}
+          {% if form.date.errors %}<div class="text-danger small">{{ form.date.errors }}</div>{% endif %}
+        </div>
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1">Payment Type</label>
+          {{ form.payment_type }}
+        </div>
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1">Warehouse</label>
+          {{ form.warehouse }}
+          {% if form.warehouse.errors %}<div class="text-danger small">{{ form.warehouse.errors }}</div>{% endif %}
+        </div>
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1">Cash Register (Till)</label>
+          {{ form.register }}
+          {% if form.register.errors %}<div class="text-danger small">{{ form.register.errors }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div class="card card-stat p-3">
+        <h6 class="mb-3">Bill Summary</h6>
+        <div class="d-flex justify-content-between mb-2"><span class="text-muted">Subtotal</span><span id="sumSubtotal">0.00</span></div>
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1">Discount</label>
+          {{ form.discount }}
+        </div>
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1">Tax</label>
+          {{ form.tax }}
+        </div>
+        <hr>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <strong>Grand Total</strong>
+          <strong id="sumTotal" class="fs-5">0.00</strong>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1">Kitna Paisa Mila (Amount Received)</label>
+          {{ form.amount_paid_now }}
+        </div>
+        <div class="mb-2 d-none" id="changeGivenWrap">
+          <label class="form-label small text-muted mb-1">Kitna Wapis Kiya (Change Given)</label>
+          <input type="number" id="changeGivenInput" class="form-control" step="0.01" min="0">
+        </div>
+        <div id="changeBox" class="change-box is-settled p-2 text-center fw-semibold mb-3">Bill khaali hai</div>
+
+        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2-circle"></i> Save Sale</button>
+      </div>
+    </div>
+  </div>
+</form>
+
+{{ prefill_items|json_script:"prefill-items-data" }}
+{{ prefill_customer|json_script:"prefill-customer-data" }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const csrfToken = document.querySelector('#saleForm [name=csrfmiddlewaretoken]').value;
+  const productSearchUrl = '{% url "sales:product_search_api" %}';
+  const customerSearchUrl = '{% url "sales:customer_search_api" %}';
+  const customerCreateUrl = '{% url "sales:customer_quick_create_api" %}';
+
+  const discountInput = document.getElementById('id_discount');
+  const taxInput = document.getElementById('id_tax');
+  const paidInput = document.getElementById('id_amount_paid_now');
+  const sumSubtotal = document.getElementById('sumSubtotal');
+  const sumTotal = document.getElementById('sumTotal');
+  const changeBox = document.getElementById('changeBox');
+  const changeGivenWrap = document.getElementById('changeGivenWrap');
+  const changeGivenInput = document.getElementById('changeGivenInput');
+  const billBody = document.getElementById('billBody');
+  const hiddenCustomer = document.getElementById('hiddenCustomer');
+
+  let cart = [];
+
+  function debounce(fn, delay) {
+    let t;
+    return function (...args) {
+      clearTimeout(t);
+      t = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
+
+  function fmt(n) {
+    return (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
+  }
+
+  // ---------- Bill table ----------
+  function renderBillTable() {
+    billBody.innerHTML = '';
+    if (cart.length === 0) {
+      billBody.innerHTML = '<tr id="emptyRow"><td colspan="5" class="text-center text-muted py-4">Abhi tak koi item add nahi hua.</td></tr>';
+      return;
+    }
+    cart.forEach(function (item, i) {
+      const lineTotal = item.qty * item.price;
+      const stockWarning = item.qty > item.stock
+        ? '<div class="text-danger small">Stock sirf ' + item.stock + ' hai</div>' : '';
+      const row = document.createElement('tr');
+      row.dataset.idx = i;
+      row.innerHTML =
+        '<td>' + item.name + (item.unit ? ' <span class="text-muted small">(' + item.unit + ')</span>' : '') + stockWarning + '</td>' +
+        '<td><input type="number" class="form-control form-control-sm qty-input" min="0.01" step="0.01" value="' + item.qty + '"></td>' +
+        '<td><input type="number" class="form-control form-control-sm price-input" min="0" step="0.01" value="' + item.price + '"></td>' +
+        '<td class="fw-semibold line-total">' + fmt(lineTotal) + '</td>' +
+        '<td><button type="button" class="btn btn-sm btn-outline-danger remove-item"><i class="bi bi-x-lg"></i></button></td>';
+      billBody.appendChild(row);
+    });
+  }
+
+  billBody.addEventListener('input', function (e) {
+    const row = e.target.closest('tr');
+    if (!row) return;
+    const idx = parseInt(row.dataset.idx);
+    if (e.target.classList.contains('qty-input')) {
+      cart[idx].qty = parseFloat(e.target.value) || 0;
+    } else if (e.target.classList.contains('price-input')) {
+      cart[idx].price = parseFloat(e.target.value) || 0;
+    } else {
+      return;
+    }
+    row.querySelector('.line-total').textContent = fmt(cart[idx].qty * cart[idx].price);
+    const warnEl = row.querySelector('.text-danger');
+    if (cart[idx].qty > cart[idx].stock) {
+      if (!warnEl) row.children[0].insertAdjacentHTML('beforeend', '<div class="text-danger small">Stock sirf ' + cart[idx].stock + ' hai</div>');
+    } else if (warnEl) {
+      warnEl.remove();
+    }
+    recalcTotals();
+  });
+
+  billBody.addEventListener('click', function (e) {
+    const btn = e.target.closest('.remove-item');
+    if (!btn) return;
+    const row = btn.closest('tr');
+    cart.splice(parseInt(row.dataset.idx), 1);
+    renderBillTable();
+    recalcTotals();
+  });
+
+  function addProductToCart(p) {
+    const existing = cart.find(function (i) { return i.product_id === p.id; });
+    if (existing) {
+      existing.qty += 1;
+    } else {
+      cart.push({
+        product_id: p.id,
+        name: p.name,
+        unit: p.unit,
+        price: parseFloat(p.price),
+        qty: 1,
+        stock: parseFloat(p.stock),
+      });
+    }
+    renderBillTable();
+    recalcTotals();
+  }
+
+  // ---------- Totals ----------
+  function recalcTotals() {
+    const subtotal = cart.reduce(function (sum, i) { return sum + i.qty * i.price; }, 0);
+    const discount = parseFloat(discountInput.value) || 0;
+    const tax = parseFloat(taxInput.value) || 0;
+    const total = subtotal - discount + tax;
+    const paid = parseFloat(paidInput.value) || 0;
+    const remaining = total - paid;
+
+    sumSubtotal.textContent = fmt(subtotal);
+    sumTotal.textContent = fmt(total);
+
+    changeBox.classList.remove('is-due', 'is-change', 'is-settled');
+    if (cart.length === 0) {
+      changeBox.textContent = 'Bill khaali hai';
+      changeBox.classList.add('is-settled');
+    } else if (remaining > 0.004) {
+      changeBox.textContent = 'Baqaya (Remaining): ' + fmt(remaining);
+      changeBox.classList.add('is-due');
+    } else if (remaining < -0.004) {
+      changeBox.textContent = 'Wapis (Change): ' + fmt(-remaining);
+      changeBox.classList.add('is-change');
+    } else {
+      changeBox.textContent = 'Fully Paid';
+      changeBox.classList.add('is-settled');
+    }
+
+    if (cart.length > 0 && remaining < -0.004) {
+      changeGivenWrap.classList.remove('d-none');
+      if (document.activeElement !== changeGivenInput) {
+        changeGivenInput.value = fmt(-remaining);
+      }
+    } else {
+      changeGivenWrap.classList.add('d-none');
+      changeGivenInput.value = '';
+    }
+  }
+
+  [discountInput, taxInput, paidInput].forEach(function (el) {
+    el.addEventListener('input', recalcTotals);
+  });
+
+  // ---------- Product search ----------
+  const productSearch = document.getElementById('productSearch');
+  const productResults = document.getElementById('productResults');
+  const warehouseSelect = document.getElementById('id_warehouse');
+  let currentProductResults = [];
+
+  function renderProductResults(results) {
+    currentProductResults = results;
+    if (results.length === 0) {
+      productResults.innerHTML = '<div class="search-dropdown-empty">Koi product nahi mila.</div>';
+    } else {
+      productResults.innerHTML = results.map(function (p) {
+        return '<div class="search-dropdown-item" data-id="' + p.id + '">' +
+          '<div><div class="fw-semibold">' + p.name + '</div>' +
+          '<div class="text-muted small">' + (p.barcode || 'No barcode') + ' &middot; Stock: ' + p.stock + '</div></div>' +
+          '<div class="fw-semibold">' + p.price + '</div></div>';
+      }).join('');
+    }
+    productResults.classList.remove('d-none');
+  }
+
+  const doProductSearch = debounce(function (q) {
+    if (!q) { productResults.classList.add('d-none'); currentProductResults = []; return; }
+    const warehouseId = warehouseSelect ? warehouseSelect.value : '';
+    fetch(productSearchUrl + '?q=' + encodeURIComponent(q) + '&warehouse_id=' + encodeURIComponent(warehouseId))
+      .then(function (r) { return r.json(); })
+      .then(function (data) { renderProductResults(data.results); });
+  }, 250);
+
+  productSearch.addEventListener('input', function () { doProductSearch(this.value.trim()); });
+
+  productSearch.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const typed = this.value.trim();
+    if (!typed) return;
+    const exact = currentProductResults.find(function (p) { return p.barcode && p.barcode.toLowerCase() === typed.toLowerCase(); });
+    if (exact) {
+      addProductToCart(exact);
+    } else if (currentProductResults.length === 1) {
+      addProductToCart(currentProductResults[0]);
+    } else {
+      return;
+    }
+    this.value = '';
+    productResults.classList.add('d-none');
+    currentProductResults = [];
+    this.focus();
+  });
+
+  productResults.addEventListener('click', function (e) {
+    const item = e.target.closest('.search-dropdown-item');
+    if (!item) return;
+    const p = currentProductResults.find(function (r) { return String(r.id) === item.dataset.id; });
+    if (p) addProductToCart(p);
+    productSearch.value = '';
+    productResults.classList.add('d-none');
+    productSearch.focus();
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!productSearch.contains(e.target) && !productResults.contains(e.target)) {
+      productResults.classList.add('d-none');
+    }
+  });
+
+  // ---------- Customer search / quick-add ----------
+  const customerSearch = document.getElementById('customerSearch');
+  const customerResults = document.getElementById('customerResults');
+  const customerChip = document.getElementById('customerChip');
+  const customerSearchWrap = document.getElementById('customerSearchWrap');
+  const chipName = document.getElementById('chipName');
+  const chipMeta = document.getElementById('chipMeta');
+  const clearCustomerBtn = document.getElementById('clearCustomer');
+  const showNewCustomerBtn = document.getElementById('showNewCustomer');
+  const newCustomerForm = document.getElementById('newCustomerForm');
+  const ncName = document.getElementById('ncName');
+  const ncPhone = document.getElementById('ncPhone');
+  const ncSave = document.getElementById('ncSave');
+  const ncCancel = document.getElementById('ncCancel');
+  const ncError = document.getElementById('ncError');
+  const dueCollectBox = document.getElementById('dueCollectBox');
+  const dueAmount = document.getElementById('dueAmount');
+  const dueCollectInput = document.getElementById('dueCollectInput');
+  const dueCollectBtn = document.getElementById('dueCollectBtn');
+  const dueCollectMsg = document.getElementById('dueCollectMsg');
+  const dueCollectError = document.getElementById('dueCollectError');
+  const collectDueUrlTemplate = '{% url "customers:customer_record_payment_api" 0 %}';
+  let currentCustomerResults = [];
+  let currentCustomer = null;
+  let currentCustomerBalance = 0;
+
+  function renderChipMeta() {
+    chipMeta.textContent = (currentCustomer.phone || 'No phone') + ' · Balance: ' + fmt(currentCustomerBalance);
+  }
+
+  function updateDueBox() {
+    if (currentCustomerBalance > 0.004) {
+      dueCollectBox.classList.remove('d-none');
+      dueAmount.textContent = fmt(currentCustomerBalance);
+      dueCollectInput.value = fmt(currentCustomerBalance);
+    } else {
+      dueCollectBox.classList.add('d-none');
+    }
+  }
+
+  function selectCustomer(c) {
+    currentCustomer = c;
+    currentCustomerBalance = parseFloat(c.balance) || 0;
+    hiddenCustomer.value = c.id;
+    chipName.textContent = c.name;
+    renderChipMeta();
+    customerChip.classList.remove('d-none');
+    customerChip.classList.add('d-flex');
+    customerSearchWrap.classList.add('d-none');
+    newCustomerForm.classList.add('d-none');
+    customerSearch.value = '';
+    customerResults.classList.add('d-none');
+    dueCollectMsg.classList.add('d-none');
+    dueCollectError.classList.add('d-none');
+    updateDueBox();
+  }
+
+  clearCustomerBtn.addEventListener('click', function () {
+    hiddenCustomer.value = '';
+    currentCustomer = null;
+    currentCustomerBalance = 0;
+    customerChip.classList.add('d-none');
+    customerChip.classList.remove('d-flex');
+    customerSearchWrap.classList.remove('d-none');
+    dueCollectBox.classList.add('d-none');
+  });
+
+  dueCollectBtn.addEventListener('click', function () {
+    const amt = parseFloat(dueCollectInput.value);
+    if (!amt || amt <= 0) {
+      dueCollectError.textContent = 'Sahi amount likhein.';
+      dueCollectError.classList.remove('d-none');
+      return;
+    }
+    dueCollectBtn.disabled = true;
+    const url = collectDueUrlTemplate.replace('/0/', '/' + currentCustomer.id + '/');
+    fetch(url, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'amount=' + encodeURIComponent(amt),
+    })
+      .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        dueCollectBtn.disabled = false;
+        if (!res.ok) {
+          dueCollectError.textContent = res.data.error || 'Payment save nahi hua.';
+          dueCollectError.classList.remove('d-none');
+          return;
+        }
+        currentCustomerBalance = parseFloat(res.data.balance) || 0;
+        renderChipMeta();
+        // Keep the box visible to show the confirmation, even if balance is now fully cleared.
+        dueAmount.textContent = fmt(currentCustomerBalance);
+        dueCollectInput.value = fmt(Math.max(currentCustomerBalance, 0));
+        dueCollectError.classList.add('d-none');
+        dueCollectMsg.textContent = 'Rs. ' + fmt(amt) + ' wasool ho gaye. Naya baqaya: ' + fmt(currentCustomerBalance);
+        dueCollectMsg.classList.remove('d-none');
+      })
+      .catch(function () {
+        dueCollectBtn.disabled = false;
+        dueCollectError.textContent = 'Network error, dobara koshish karein.';
+        dueCollectError.classList.remove('d-none');
+      });
+  });
+
+  function renderCustomerResults(results) {
+    currentCustomerResults = results;
+    if (results.length === 0) {
+      customerResults.innerHTML = '<div class="search-dropdown-empty">Customer nahi mila — "+ Naya Customer" se add karein.</div>';
+    } else {
+      customerResults.innerHTML = results.map(function (c) {
+        return '<div class="search-dropdown-item" data-id="' + c.id + '">' +
+          '<div><div class="fw-semibold">' + c.name + '</div>' +
+          '<div class="text-muted small">' + (c.phone || 'No phone') + '</div></div>' +
+          '<div class="text-muted small">Bal: ' + c.balance + '</div></div>';
+      }).join('');
+    }
+    customerResults.classList.remove('d-none');
+  }
+
+  const doCustomerSearch = debounce(function (q) {
+    if (!q) { customerResults.classList.add('d-none'); currentCustomerResults = []; return; }
+    fetch(customerSearchUrl + '?q=' + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (data) { renderCustomerResults(data.results); });
+  }, 250);
+
+  customerSearch.addEventListener('input', function () { doCustomerSearch(this.value.trim()); });
+
+  customerResults.addEventListener('click', function (e) {
+    const item = e.target.closest('.search-dropdown-item');
+    if (!item) return;
+    const c = currentCustomerResults.find(function (r) { return String(r.id) === item.dataset.id; });
+    if (c) selectCustomer(c);
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!customerSearch.contains(e.target) && !customerResults.contains(e.target)) {
+      customerResults.classList.add('d-none');
+    }
+  });
+
+  showNewCustomerBtn.addEventListener('click', function () {
+    ncName.value = customerSearch.value.trim();
+    ncPhone.value = '';
+    ncError.classList.add('d-none');
+    newCustomerForm.classList.remove('d-none');
+    ncName.focus();
+  });
+
+  ncCancel.addEventListener('click', function () {
+    newCustomerForm.classList.add('d-none');
+  });
+
+  ncSave.addEventListener('click', function () {
+    const name = ncName.value.trim();
+    if (!name) {
+      ncError.textContent = 'Naam likhna zaroori hai.';
+      ncError.classList.remove('d-none');
+      return;
+    }
+    ncSave.disabled = true;
+    fetch(customerCreateUrl, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'name=' + encodeURIComponent(name) + '&phone=' + encodeURIComponent(ncPhone.value.trim()),
+    })
+      .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        ncSave.disabled = false;
+        if (!res.ok) {
+          ncError.textContent = res.data.error || 'Customer add nahi ho saka.';
+          ncError.classList.remove('d-none');
+          return;
+        }
+        selectCustomer(res.data);
+      })
+      .catch(function () {
+        ncSave.disabled = false;
+        ncError.textContent = 'Network error, dobara koshish karein.';
+        ncError.classList.remove('d-none');
+      });
+  });
+
+  // ---------- Submit ----------
+  document.getElementById('saleForm').addEventListener('submit', function (e) {
+    if (cart.length === 0) {
+      e.preventDefault();
+      alert('Sale save karne se pehle kam az kam ek product add karein.');
+      return;
+    }
+    const container = document.getElementById('itemInputs');
+    container.innerHTML = '';
+    cart.forEach(function (item, i) {
+      container.insertAdjacentHTML('beforeend',
+        '<input type="hidden" name="items-' + i + '-product" value="' + item.product_id + '">' +
+        '<input type="hidden" name="items-' + i + '-quantity" value="' + item.qty + '">' +
+        '<input type="hidden" name="items-' + i + '-selling_price" value="' + item.price + '">'
+      );
+    });
+    document.getElementById('id_items-TOTAL_FORMS').value = cart.length;
+  });
+
+  // ---------- Prefill (after a validation error re-render) ----------
+  const prefillItems = JSON.parse(document.getElementById('prefill-items-data').textContent);
+  const prefillCustomer = JSON.parse(document.getElementById('prefill-customer-data').textContent);
+  if (prefillItems && prefillItems.length) {
+    cart = prefillItems.map(function (it) {
+      return {
+        product_id: it.product_id,
+        name: it.name,
+        unit: it.unit,
+        price: parseFloat(it.price),
+        qty: parseFloat(it.qty),
+        stock: parseFloat(it.stock),
+      };
+    });
+    renderBillTable();
+  }
+  if (prefillCustomer) {
+    selectCustomer(prefillCustomer);
+  }
+  recalcTotals();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Account Reconciliation{% endblock %}
+{% block content %}
+<h3>Account Reconciliation</h3>
+{% if mismatches %}
+<div class="card card-stat p-3 mb-3 border-danger">
+  <strong class="text-danger">{{ mismatches|length }} account(s) out of sync — Account.balance does not match the sum of its ledger entries.</strong>
+</div>
+{% else %}
+<div class="card card-stat p-3 mb-3 border-success">
+  <strong class="text-success">All accounts reconcile — every cached balance matches its ledger entries.</strong>
+</div>
+{% endif %}
+<div class="card card-stat p-3">
+<table class="table">
+<thead><tr><th>Code</th><th>Account</th><th>Type</th><th>Debit Total</th><th>Credit Total</th><th>Computed Balance</th><th>Cached Balance</th><th>Difference</th></tr></thead>
+<tbody>
+{% for r in rows %}
+<tr class="{% if r.difference %}table-danger{% endif %}">
+  <td>{{ r.account.code }}</td>
+  <td>{{ r.account.name }}</td>
+  <td>{{ r.account.get_type_display }}</td>
+  <td>{{ r.debit_total }}</td>
+  <td>{{ r.credit_total }}</td>
+  <td>{{ r.computed_balance }}</td>
+  <td>{{ r.account.balance }}</td>
+  <td>{% if r.difference %}<strong>{{ r.difference }}</strong>{% else %}—{% endif %}</td>
+</tr>
+{% empty %}<tr><td colspan="8" class="text-center text-muted">No accounts found.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

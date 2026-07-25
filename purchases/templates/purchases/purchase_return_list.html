@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Purchase Returns{% endblock %}
+{% block content %}
+<h3>Purchase Returns</h3>
+<div class="card card-stat p-3">
+<table class="table table-hover align-middle">
+<thead><tr><th>Return #</th><th>Purchase</th><th>Supplier</th><th>Date</th><th>Value</th></tr></thead>
+<tbody>
+{% for r in returns %}
+<tr>
+  <td><a href="{% url 'purchases:purchase_return_detail' r.pk %}">{{ r.return_no }}</a></td>
+  <td><a href="{% url 'purchases:purchase_detail' r.purchase.pk %}">{{ r.purchase.invoice_no }}</a></td>
+  <td>{{ r.purchase.supplier }}</td>
+  <td>{{ r.date }}</td>
+  <td>{{ r.total_value }}</td>
+</tr>
+{% empty %}<tr><td colspan="5" class="text-center text-muted">No purchase returns yet.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

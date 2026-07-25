@@ -1,0 +1,52 @@
+<html>
+<head>
+<style>
+  body { font-family: Helvetica, Arial, sans-serif; font-size: 11px; color: #222; }
+  .center { text-align: center; }
+  .store-name { font-size: 18px; font-weight: bold; }
+  hr { border: none; border-top: 1px solid #999; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th, td { padding: 4px 6px; border: 1px solid #ccc; text-align: left; }
+  th { background-color: #f0f0f0; }
+  .totals { width: 45%; margin-left: 55%; margin-top: 10px; }
+  .totals td { border: none; padding: 2px 6px; }
+  .right { text-align: right; }
+</style>
+</head>
+<body>
+  <div class="center">
+    <div class="store-name">{{ store_settings.store_name|default:"GSMS" }}</div>
+    <div>Purchase Invoice</div>
+    <hr>
+  </div>
+
+  <p>
+    <strong>Invoice #:</strong> {{ purchase.invoice_no }} &nbsp;|&nbsp;
+    <strong>Supplier:</strong> {{ purchase.supplier }} &nbsp;|&nbsp;
+    <strong>Warehouse:</strong> {{ purchase.warehouse }} &nbsp;|&nbsp;
+    <strong>Date:</strong> {{ purchase.date }}
+  </p>
+
+  <table>
+    <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Batch</th><th>Expiry</th><th class="right">Total</th></tr></thead>
+    <tbody>
+    {% for i in purchase.items.all %}
+      <tr>
+        <td>{{ i.product }}</td><td>{{ i.quantity }}</td><td>{{ i.purchase_price }}</td>
+        <td>{{ i.batch.batch_number|default:"-" }}</td><td>{{ i.expiry_date|default:"-" }}</td>
+        <td class="right">{{ i.line_total }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <table class="totals">
+    <tr><td>Subtotal</td><td class="right">{{ purchase.subtotal }}</td></tr>
+    <tr><td>Discount</td><td class="right">{{ purchase.discount }}</td></tr>
+    <tr><td>Tax</td><td class="right">{{ purchase.tax }}</td></tr>
+    <tr><td><strong>Total</strong></td><td class="right"><strong>{{ purchase.total }}</strong></td></tr>
+    <tr><td>Paid</td><td class="right">{{ purchase.paid }}</td></tr>
+    <tr><td>Remaining</td><td class="right">{{ purchase.remaining }}</td></tr>
+  </table>
+</body>
+</html>

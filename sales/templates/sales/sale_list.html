@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Sales{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Sales</h3>
+  <a href="{% url 'sales:sale_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Sale</a>
+</div>
+<form method="get" class="mb-3 d-flex align-items-end gap-2 flex-wrap">
+  <div>
+    <label class="form-label small text-muted mb-1">Invoice # ya Customer</label>
+    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Search..." style="max-width:250px;">
+  </div>
+  <div>
+    <label class="form-label small text-muted mb-1">Date</label>
+    <input type="date" name="date" value="{{ date }}" class="form-control">
+  </div>
+  <button type="submit" class="btn btn-outline-primary"><i class="bi bi-search"></i> Search</button>
+  {% if q or date %}<a href="{% url 'sales:sale_list' %}" class="btn btn-outline-secondary">Clear</a>{% endif %}
+</form>
+<div class="card card-stat p-3">
+<table class="table table-hover align-middle">
+<thead><tr><th>Invoice</th><th>Customer</th><th>Date</th><th>Total</th><th>Paid</th><th>Baqaya / Change</th><th>Type</th><th>Status</th></tr></thead>
+<tbody>
+{% for s in sales %}
+<tr>
+  <td><a href="{% url 'sales:sale_detail' s.pk %}">{{ s.invoice_no }}</a></td>
+  <td>{{ s.customer|default:"Walk-in" }}</td><td>{{ s.date }}</td>
+  <td>{{ s.total }}</td><td>{{ s.paid }}</td>
+  <td>
+    {% if s.remaining > 0 %}<span class="text-danger">Due: {{ s.remaining }}</span>
+    {% elif s.remaining < 0 %}<span class="text-success">Change: {{ s.remaining|cut:"-" }}</span>
+    {% else %}<span class="text-muted">—</span>{% endif %}
+  </td>
+  <td>{% if s.payment_type == 'credit' %}<span class="badge bg-warning text-dark">Credit</span>{% else %}<span class="badge bg-success">Cash</span>{% endif %}</td>
+  <td>
+    {% if s.status == 'paid' %}<span class="badge bg-success">Paid</span>
+    {% elif s.status == 'partial' %}<span class="badge bg-warning text-dark">Partial</span>
+    {% else %}<span class="badge bg-secondary">Pending</span>{% endif %}
+  </td>
+</tr>
+{% empty %}<tr><td colspan="8" class="text-center text-muted">No sales yet.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

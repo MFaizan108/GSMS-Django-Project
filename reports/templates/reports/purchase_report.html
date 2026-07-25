@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Purchase Report{% endblock %}
+{% block content %}
+<h3>Purchase Report</h3>
+{% include "reports/_date_filter.html" %}
+<div class="card card-stat p-3 mb-3"><strong>Total Purchases: {{ total }}</strong></div>
+<div class="card card-stat p-3">
+<table class="table"><thead><tr><th>Invoice</th><th>Supplier</th><th>Date</th><th>Total</th><th>Paid</th><th>Status</th></tr></thead>
+<tbody>{% for p in purchases %}<tr><td>{{ p.invoice_no }}</td><td>{{ p.supplier }}</td><td>{{ p.date }}</td><td>{{ p.total }}</td><td>{{ p.paid }}</td><td>{{ p.get_status_display }}</td></tr>
+{% empty %}<tr><td colspan="6" class="text-center text-muted">No purchases in this period.</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Purchase Return {{ purchase_return.return_no }}{% endblock %}
+{% block content %}
+<h3>Purchase Return #{{ purchase_return.return_no }}</h3>
+<div class="card card-stat p-3 mb-3">
+  <p><strong>Purchase:</strong> <a href="{% url 'purchases:purchase_detail' purchase_return.purchase.pk %}">{{ purchase_return.purchase.invoice_no }}</a>
+   | <strong>Date:</strong> {{ purchase_return.date }}
+   {% if purchase_return.note %}| <strong>Note:</strong> {{ purchase_return.note }}{% endif %}</p>
+</div>
+<div class="card card-stat p-3 mb-3">
+<table class="table">
+<thead><tr><th>Product</th><th>Qty</th><th>Unit Cost</th><th>Line Total</th></tr></thead>
+<tbody>
+{% for i in purchase_return.items.all %}
+<tr><td>{{ i.purchase_item.product }}</td><td>{{ i.quantity }}</td><td>{{ i.unit_cost }}</td><td>{{ i.line_total }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+<div class="card card-stat p-3" style="max-width:300px;">
+  <p><strong>Total Value: {{ purchase_return.total_value }}</strong></p>
+</div>
+{% endblock %}

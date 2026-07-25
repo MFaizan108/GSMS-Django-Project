@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Cash Registers{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">Cash Registers</h3>
+  <a href="{% url 'finance:cash_register_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Register</a>
+</div>
+<div class="card card-stat p-3">
+<table class="table table-hover align-middle">
+<thead><tr><th>Name</th><th>Code</th><th>Warehouse</th><th>Balance</th><th>Active</th></tr></thead>
+<tbody>
+{% for r in registers %}
+<tr>
+  <td><a href="{% url 'finance:cash_register_detail' r.pk %}">{{ r.name }}</a></td>
+  <td>{{ r.code }}</td>
+  <td>{{ r.warehouse|default:"-" }}</td>
+  <td>{{ r.current_balance }}</td>
+  <td>{% if r.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}</td>
+</tr>
+{% empty %}<tr><td colspan="5" class="text-center text-muted">No cash registers yet.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

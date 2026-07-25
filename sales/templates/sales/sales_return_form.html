@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}New Sales Return{% endblock %}
+{% block content %}
+<h3>New Sales Return — Sale #{{ sale.invoice_no }}</h3>
+<form method="post">
+  {% csrf_token %}
+  <div class="card card-stat p-4 mb-3">
+    <div class="row">
+    {% for field in form %}
+      <div class="col-md-4 mb-3">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    </div>
+  </div>
+
+  <div class="card card-stat p-4 mb-3">
+    <h5>Items</h5>
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}<div class="text-danger">{{ formset.non_form_errors }}</div>{% endif %}
+    <table class="table">
+      <thead><tr><th>Sold Item</th><th>Return Qty</th><th>Condition</th><th>Delete</th></tr></thead>
+      <tbody>
+      {% for f in formset %}
+        <tr>
+          <td>{{ f.id }}{{ f.sale_item }}{% if f.sale_item.errors %}<div class="text-danger small">{{ f.sale_item.errors }}</div>{% endif %}</td>
+          <td>{{ f.quantity }}</td>
+          <td>{{ f.condition }}</td>
+          <td>{% if f.instance.pk %}{{ f.DELETE }}{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="form-text">Sold quantities already returned can't be returned again — the item dropdown always reflects this sale's lines; check the sale detail page for what's still returnable.</p>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Save Return</button>
+</form>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ register.name }}{% endblock %}
+{% block content %}
+<h3>{{ register.name }}</h3>
+<div class="row">
+  <div class="col-md-5">
+    <div class="card card-stat p-3 mb-3">
+      <p><strong>Code:</strong> {{ register.code }}</p>
+      <p><strong>Warehouse:</strong> {{ register.warehouse|default:"-" }}</p>
+      <p class="mb-0"><strong>Current Balance:</strong><br><span class="fs-3 fw-bold">{{ register.current_balance }}</span></p>
+    </div>
+    <div class="card card-stat p-3">
+      <h6>Record Cash Movement</h6>
+      <form method="post" action="{% url 'finance:cash_transaction_create' register.pk %}">
+        {% csrf_token %}
+        {% for field in form %}
+          <div class="mb-2">
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+          </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-success w-100">Save</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="card card-stat p-3">
+      <h6>Transaction History</h6>
+      <table class="table table-sm">
+        <thead><tr><th>Date</th><th>Type</th><th>Direction</th><th>Amount</th><th>Balance After</th><th>Note</th></tr></thead>
+        <tbody>
+        {% for t in transactions %}
+          <tr>
+            <td>{{ t.created_at|date:"d M Y H:i" }}</td>
+            <td>{{ t.get_transaction_type_display }}</td>
+            <td>{% if t.direction == 'in' %}<span class="badge bg-success">In</span>{% else %}<span class="badge bg-danger">Out</span>{% endif %}</td>
+            <td>{{ t.amount }}</td>
+            <td>{{ t.balance_after }}</td>
+            <td>{{ t.note }}</td>
+          </tr>
+        {% empty %}<tr><td colspan="6" class="text-center text-muted">No transactions yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

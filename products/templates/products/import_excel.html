@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Import Products{% endblock %}
+{% block content %}
+<h3>Import Products from Excel</h3>
+<div class="card card-stat p-4" style="max-width:600px;">
+  <p class="text-muted">
+    Upload an <code>.xlsx</code> file with a header row containing any of:
+    <code>name, barcode, sku, category, brand, unit, tax, purchase_price, retail_price, minimum_stock, expiry_date, manufacture_date, status</code>.
+    Only <code>name</code> is required. Rows are matched to existing products by barcode, then SKU — matched rows update, unmatched rows create a new product.
+    Use <a href="{% url 'products:product_export_excel' %}">Export Excel</a> to get a starter file in the right format.
+  </p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="mb-3">
+      <input type="file" name="file" accept=".xlsx" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Import</button>
+    <a href="{% url 'products:product_list' %}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Supplier Balance Report{% endblock %}
+{% block content %}
+<h3>Supplier Balance Report</h3>
+<div class="card card-stat p-3 mb-3"><strong>Total Payable: {{ total }}</strong></div>
+<div class="card card-stat p-3">
+<table class="table"><thead><tr><th>Supplier</th><th>Phone</th><th>Balance Owed</th></tr></thead>
+<tbody>{% for s in suppliers %}<tr><td>{{ s.name }}</td><td>{{ s.phone }}</td><td class="text-danger">{{ s.current_balance }}</td></tr>
+{% empty %}<tr><td colspan="3" class="text-center text-muted">No outstanding supplier balances.</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endblock %}

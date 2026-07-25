@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}{{ supplier.name }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">{{ supplier.name }}</h3>
+  <div class="d-flex gap-2">
+    <a href="{% url 'suppliers:supplier_statement_pdf' supplier.pk %}?start={{ start }}&end={{ end }}&type={{ selected_kind }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-pdf"></i> Print / Download Statement</a>
+    <a href="{% url 'suppliers:supplier_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Suppliers</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-2">
+    <div class="card card-stat p-3 h-100">
+      <div class="small text-muted">Total Purchases</div>
+      <div class="fs-5 fw-bold">{{ stats.total_invoiced }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card card-stat p-3 h-100">
+      <div class="small text-muted">Total Paid</div>
+      <div class="fs-5 fw-bold text-success">{{ stats.total_paid }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card card-stat p-3 h-100">
+      <div class="small text-muted">Total Outstanding</div>
+      <div class="fs-5 fw-bold {% if stats.outstanding > 0 %}text-danger{% elif stats.outstanding < 0 %}text-warning{% endif %}">{{ stats.outstanding }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card card-stat p-3 h-100">
+      <div class="small text-muted">Last Payment</div>
+      {% if stats.last_payment %}
+        <div class="fw-semibold">{{ stats.last_payment.amount }} <span class="small text-muted">on {{ stats.last_payment.date|date:"d M Y" }}</span></div>
+      {% else %}
+        <div class="text-muted">—</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card card-stat p-3 h-100">
+      <div class="small text-muted">Last Transaction</div>
+      {% if stats.last_transaction %}
+        <div class="fw-semibold">{{ stats.last_transaction.transaction.memo|truncatechars:28 }} <span class="small text-muted">{{ stats.last_transaction.transaction.date|date:"d M Y" }}</span></div>
+      {% else %}
+        <div class="text-muted">—</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-5">
+    <div class="card card-stat p-3 mb-3">
+      <p><strong>Company:</strong> {{ supplier.company }}</p>
+      <p><strong>Phone:</strong> {{ supplier.phone }}</p>
+      <p><strong>Email:</strong> {{ supplier.email }}</p>
+      <p><strong>Address:</strong> {{ supplier.address }}</p>
+      <p><strong>Current Balance:</strong> <span class="fs-4 {% if supplier.current_balance > 0 %}text-danger{% endif %}">{{ supplier.current_balance }}</span></p>
+    </div>
+    {% if user.is_manager %}
+    <div class="card card-stat p-3">
+      <h6>Record Payment (to supplier)</h6>
+      <form method="post" action="{% url 'suppliers:supplier_payment' supplier.pk %}">
+        {% csrf_token %}
+        {% for field in payment_form %}
+          <div class="mb-2">
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+          </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-success w-100">Save Payment</button>
+      </form>
+    </div>
+    <div class="card card-stat p-3 mt-3">
+      <a href="{% url 'payments:supplier_payment_allocate' supplier.pk %}" class="btn btn-outline-primary w-100"><i class="bi bi-list-check"></i> Allocate Payment Across Invoices</a>
+    </div>
+    <div class="card card-stat p-3 mt-3">
+      <h6><i class="bi bi-arrow-down-circle text-success"></i> Receive Refund (from supplier)</h6>
+      <p class="form-text mt-n1">Jab supplier humein purchase return ka refund cash/bank mein wapis de.</p>
+      <form method="post" action="{% url 'suppliers:supplier_receive_refund' supplier.pk %}">
+        {% csrf_token %}
+        {% for field in refund_form %}
+          <div class="mb-2">
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+          </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-success w-100">Save Refund</button>
+      </form>
+    </div>
+    <div class="card card-stat p-3 mt-3">
+      <h6><i class="bi bi-sliders text-secondary"></i> Balance Adjustment</h6>
+      <p class="form-text mt-n1">Sirf data-entry error theek karne ke liye — note likhna zaroori hai.</p>
+      <form method="post" action="{% url 'suppliers:supplier_balance_adjustment' supplier.pk %}">
+        {% csrf_token %}
+        {% for field in adjustment_form %}
+          <div class="mb-2">
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+          </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-outline-secondary w-100"><i class="bi bi-check2-circle"></i> Save Adjustment</button>
+      </form>
+    </div>
+    {% else %}
+    <div class="card card-stat p-3 text-muted">Supplier payments and refunds require manager access.</div>
+    {% endif %}
+  </div>
+  <div class="col-md-7">
+    <div class="card card-stat p-3">
+      <h6>Ledger</h6>
+      <form method="get" class="row g-2 mb-3">
+        <div class="col-4">
+          <label class="form-label small text-muted mb-1">From</label>
+          <input type="date" name="start" value="{{ start }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-4">
+          <label class="form-label small text-muted mb-1">To</label>
+          <input type="date" name="end" value="{{ end }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-4">
+          <label class="form-label small text-muted mb-1">Type</label>
+          <select name="type" class="form-select form-select-sm">
+            <option value="">All Types</option>
+            {% for k in kind_choices %}
+              <option value="{{ k }}" {% if selected_kind == k %}selected{% endif %}>{{ k }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-funnel"></i> Filter</button>
+          <a href="{% url 'suppliers:supplier_detail' supplier.pk %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+        </div>
+      </form>
+      <table class="table table-sm">
+        <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
+        <tbody>
+        {% for l in ledger %}
+          <tr>
+            <td>{{ l.transaction.date|date:"d M Y" }}</td>
+            <td>{{ l.transaction.memo }}</td>
+            <td><span class="badge bg-light text-dark border">{{ l.kind }}</span></td>
+            <td>{% if l.entry_type == 'debit' %}{{ l.amount }}{% endif %}</td>
+            <td>{% if l.entry_type == 'credit' %}{{ l.amount }}{% endif %}</td>
+            <td class="fw-semibold">{{ l.running_balance }}</td>
+          </tr>
+        {% empty %}<tr><td colspan="6" class="text-center text-muted">No ledger entries yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

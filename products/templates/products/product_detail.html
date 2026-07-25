@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block content %}
+<h3>{{ product.name }}</h3>
+<div class="card card-stat p-4" style="max-width:600px;">
+  <table class="table">
+    <tr><th>Category</th><td>{{ product.category|default:"-" }}</td></tr>
+    <tr><th>Brand</th><td>{{ product.brand|default:"-" }}</td></tr>
+    <tr><th>Unit</th><td>{{ product.unit|default:"-" }}</td></tr>
+    <tr><th>Barcode</th><td>{{ product.barcode|default:"-" }}</td></tr>
+    <tr><th>SKU</th><td>{{ product.sku|default:"-" }}</td></tr>
+    <tr><th>Purchase Price</th><td>{{ product.purchase_price }}</td></tr>
+    {% for pr in product.prices.all %}
+    <tr><th>{{ pr.price_level.name }} Price</th><td>{{ pr.price }}</td></tr>
+    {% empty %}
+    <tr><th>Retail Price</th><td>{{ product.retail_price }}</td></tr>
+    {% endfor %}
+    <tr><th>Tax</th><td>{{ product.tax|default:"-" }}</td></tr>
+    <tr><th>Current Stock</th><td>{{ product.stock }}</td></tr>
+    <tr><th>Minimum Stock</th><td>{{ product.minimum_stock }}</td></tr>
+    <tr><th>Expiry Date</th><td>{{ product.expiry_date|default:"-" }}</td></tr>
+    <tr><th>Status</th><td>{{ product.get_status_display }}</td></tr>
+  </table>
+  <a href="{% url 'products:product_edit' product.pk %}" class="btn btn-primary">Edit</a>
+  <a href="{% url 'products:product_barcode_label' product.pk %}" class="btn btn-outline-secondary"><i class="bi bi-upc-scan"></i> Print Barcode</a>
+  <a href="{% url 'products:product_list' %}" class="btn btn-secondary">Back</a>
+</div>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Customers{% endblock %}
+{% block content %}
+{% csrf_token %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Customers</h3>
+  <a href="{% url 'customers:customer_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Customer</a>
+</div>
+<div class="card card-stat p-3">
+<table class="table table-hover align-middle">
+<thead><tr><th>Name</th><th>Phone</th><th>Balance (owed to store)</th><th class="text-end">Actions</th></tr></thead>
+<tbody>
+{% for c in customers %}
+<tr id="customer-row-{{ c.pk }}">
+  <td><a href="{% url 'customers:customer_detail' c.pk %}">{{ c.name }}</a></td>
+  <td>{{ c.phone|default:"—" }}</td>
+  <td class="balance-cell {% if c.current_balance > 0 %}text-danger fw-semibold{% elif c.current_balance < 0 %}text-warning fw-semibold{% endif %}">{{ c.current_balance }}</td>
+  <td class="text-end">
+    <button type="button" class="btn btn-sm btn-outline-success" title="Add Payment"
+      data-bs-toggle="modal" data-bs-target="#paymentModal"
+      data-id="{{ c.pk }}" data-name="{{ c.name }}" data-balance="{{ c.current_balance }}">
+      <i class="bi bi-cash-coin"></i>
+    </button>
+    <a href="{% url 'customers:customer_edit' c.pk %}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+    <form method="post" action="{% url 'customers:customer_delete' c.pk %}" class="d-inline" onsubmit="return confirm('Delete {{ c.name }}? This cannot be undone.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+    </form>
+  </td>
+</tr>
+{% empty %}<tr><td colspan="4" class="text-center text-muted py-4">No customers yet.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pmTitle"><i class="bi bi-cash-coin text-success"></i> Add Payment</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-1">Customer: <strong id="pmCustomerName"></strong></p>
+        <p class="small mb-3" id="pmCustomerBalance"></p>
+
+        <div class="btn-group w-100 mb-3" role="group">
+          <input type="radio" class="btn-check" name="pmDirection" id="pmDirIn" autocomplete="off" checked>
+          <label class="btn btn-outline-success btn-sm" for="pmDirIn"><i class="bi bi-arrow-down-circle"></i> Wasool Karo</label>
+          <input type="radio" class="btn-check" name="pmDirection" id="pmDirOut" autocomplete="off">
+          <label class="btn btn-outline-warning btn-sm" for="pmDirOut"><i class="bi bi-arrow-up-circle"></i> Ada Karo</label>
+        </div>
+        <p class="form-text mt-n2 mb-3" id="pmDirectionHint">Customer se paisay wasool kiye (customer paid us).</p>
+
+        <label class="form-label">Amount</label>
+        <input type="number" id="pmAmount" class="form-control" step="0.01" min="0.01">
+        <div class="text-danger small mt-2 d-none" id="pmError"></div>
+        <div class="text-success small mt-2 d-none" id="pmSuccess"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="pmSave"><i class="bi bi-check2"></i> Save Payment</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const modalEl = document.getElementById('paymentModal');
+  const pmTitle = document.getElementById('pmTitle');
+  const pmCustomerName = document.getElementById('pmCustomerName');
+  const pmCustomerBalance = document.getElementById('pmCustomerBalance');
+  const pmDirIn = document.getElementById('pmDirIn');
+  const pmDirOut = document.getElementById('pmDirOut');
+  const pmDirectionHint = document.getElementById('pmDirectionHint');
+  const pmAmount = document.getElementById('pmAmount');
+  const pmError = document.getElementById('pmError');
+  const pmSuccess = document.getElementById('pmSuccess');
+  const pmSave = document.getElementById('pmSave');
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  let activeCustomerId = null;
+  let activeBtn = null;
+
+  function fmt(n) {
+    return (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
+  }
+
+  function applyBalance(balance) {
+    if (balance > 0.004) {
+      pmCustomerBalance.innerHTML = '<span class="text-danger">Customer par baqaya hai: ' + fmt(balance) + '</span>';
+      pmDirIn.checked = true;
+      pmAmount.value = fmt(balance);
+    } else if (balance < -0.004) {
+      pmCustomerBalance.innerHTML = '<span class="text-warning">Aap ne is customer ko dena hai: ' + fmt(-balance) + '</span>';
+      pmDirOut.checked = true;
+      pmAmount.value = fmt(-balance);
+    } else {
+      pmCustomerBalance.innerHTML = '<span class="text-muted">Balance clear hai (0.00)</span>';
+      pmDirIn.checked = true;
+      pmAmount.value = '';
+    }
+    updateDirectionUI();
+  }
+
+  function updateDirectionUI() {
+    if (pmDirOut.checked) {
+      pmTitle.innerHTML = '<i class="bi bi-arrow-up-circle text-warning"></i> Ada Karo (Customer ko Payment)';
+      pmDirectionHint.textContent = 'Aap customer ko paisay wapis de rahe hain (store paid the customer).';
+      pmSave.className = 'btn btn-warning';
+    } else {
+      pmTitle.innerHTML = '<i class="bi bi-cash-coin text-success"></i> Wasool Karo (Customer se Payment)';
+      pmDirectionHint.textContent = 'Customer se paisay wasool kiye (customer paid us).';
+      pmSave.className = 'btn btn-success';
+    }
+  }
+
+  pmDirIn.addEventListener('change', updateDirectionUI);
+  pmDirOut.addEventListener('change', updateDirectionUI);
+
+  modalEl.addEventListener('show.bs.modal', function (e) {
+    activeBtn = e.relatedTarget;
+    activeCustomerId = activeBtn.dataset.id;
+    pmCustomerName.textContent = activeBtn.dataset.name;
+    applyBalance(parseFloat(activeBtn.dataset.balance) || 0);
+    pmError.classList.add('d-none');
+    pmSuccess.classList.add('d-none');
+  });
+
+  pmSave.addEventListener('click', function () {
+    const amt = parseFloat(pmAmount.value);
+    if (!amt || amt <= 0) {
+      pmError.textContent = 'Sahi amount likhein.';
+      pmError.classList.remove('d-none');
+      pmSuccess.classList.add('d-none');
+      return;
+    }
+    const direction = pmDirOut.checked ? 'out' : 'in';
+    pmSave.disabled = true;
+    fetch('/customers/' + activeCustomerId + '/record-payment/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'amount=' + encodeURIComponent(amt) + '&direction=' + direction,
+    })
+      .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        pmSave.disabled = false;
+        if (!res.ok) {
+          pmError.textContent = res.data.error || 'Payment save nahi hui.';
+          pmError.classList.remove('d-none');
+          return;
+        }
+        const newBalance = parseFloat(res.data.balance) || 0;
+        const row = document.getElementById('customer-row-' + activeCustomerId);
+        const cell = row.querySelector('.balance-cell');
+        cell.textContent = res.data.balance;
+        cell.classList.remove('text-danger', 'text-warning', 'fw-semibold');
+        if (newBalance > 0.004) cell.classList.add('text-danger', 'fw-semibold');
+        else if (newBalance < -0.004) cell.classList.add('text-warning', 'fw-semibold');
+        activeBtn.dataset.balance = res.data.balance;
+        pmError.classList.add('d-none');
+        pmSuccess.textContent = 'Rs. ' + fmt(amt) + ' save ho gaye. Naya balance: ' + res.data.balance;
+        pmSuccess.classList.remove('d-none');
+        applyBalance(newBalance);
+      })
+      .catch(function () {
+        pmSave.disabled = false;
+        pmError.textContent = 'Network error, dobara koshish karein.';
+        pmError.classList.remove('d-none');
+      });
+  });
+})();
+</script>
+{% endblock %}

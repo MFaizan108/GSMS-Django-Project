@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Purchase Order {{ order.order_no }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">Purchase Order #{{ order.order_no }}</h3>
+  {% if order.status != 'received' and order.status != 'cancelled' %}
+  <a href="{% url 'purchases:purchase_create' %}?from_po={{ order.pk }}" class="btn btn-primary"><i class="bi bi-box-arrow-in-down"></i> Create Purchase from this Order</a>
+  {% endif %}
+</div>
+<div class="card card-stat p-3 mb-3">
+  <p><strong>Supplier:</strong> {{ order.supplier }} | <strong>Warehouse:</strong> {{ order.warehouse }} | <strong>Date:</strong> {{ order.date }} | <strong>Status:</strong> {{ order.get_status_display }}</p>
+  {% if order.note %}<p class="text-muted mb-0">{{ order.note }}</p>{% endif %}
+</div>
+<div class="card card-stat p-3">
+<table class="table">
+<thead><tr><th>Product</th><th>Ordered Qty</th><th>Received Qty</th><th>Pending Qty</th><th>Expected Price</th><th>Line Total</th></tr></thead>
+<tbody>
+{% for i in order.items.all %}
+<tr>
+  <td>{{ i.product }}</td>
+  <td>{{ i.quantity }}</td>
+  <td>{{ i.received_quantity }}</td>
+  <td>{{ i.pending_quantity }}</td>
+  <td>{{ i.expected_price }}</td>
+  <td>{{ i.line_total }}</td>
+</tr>
+{% empty %}<tr><td colspan="6" class="text-center text-muted">No items on this order.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

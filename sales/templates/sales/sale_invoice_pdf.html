@@ -1,0 +1,74 @@
+<html>
+<head>
+<style>
+  body { font-family: Helvetica, Arial, sans-serif; font-size: 11px; color: #222; }
+  .center { text-align: center; }
+  .store-name { font-size: 18px; font-weight: bold; }
+  hr { border: none; border-top: 1px solid #999; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th, td { padding: 4px 6px; border: 1px solid #ccc; text-align: left; }
+  th { background-color: #f0f0f0; }
+  .totals { width: 45%; margin-left: 55%; margin-top: 10px; }
+  .totals td { border: none; padding: 2px 6px; }
+  .right { text-align: right; }
+  .footer { margin-top: 16px; text-align: center; color: #666; }
+</style>
+</head>
+<body>
+  <div class="center">
+    <div class="store-name">{{ store_settings.store_name|default:"GSMS" }}</div>
+    {% if store_settings.owner_name %}<div>Owner: {{ store_settings.owner_name }}</div>{% endif %}
+    {% if store_settings.phone %}<div>Phone: {{ store_settings.phone }}</div>{% endif %}
+    {% if store_settings.address %}<div>{{ store_settings.address }}</div>{% endif %}
+    <hr>
+  </div>
+
+  <p>
+    <strong>Invoice #:</strong> {{ sale.invoice_no }} &nbsp;|&nbsp;
+    <strong>Customer:</strong> {{ sale.customer|default:"Walk-in" }} &nbsp;|&nbsp;
+    <strong>Date:</strong> {{ sale.date }} &nbsp;|&nbsp;
+    <strong>Type:</strong> {{ sale.get_payment_type_display }}
+  </p>
+
+  <table>
+    <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th class="right">Total</th></tr></thead>
+    <tbody>
+    {% for i in sale.items.all %}
+      <tr><td>{{ i.product }}</td><td>{{ i.quantity }}</td><td>{{ i.selling_price }}</td><td class="right">{{ i.line_total }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <table class="totals">
+    <tr><td>Subtotal</td><td class="right">{{ sale.subtotal }}</td></tr>
+    <tr><td>Discount</td><td class="right">{{ sale.discount }}</td></tr>
+    <tr><td>Tax</td><td class="right">{{ sale.tax }}</td></tr>
+    <tr><td><strong>Total</strong></td><td class="right"><strong>{{ sale.total }}</strong></td></tr>
+    <tr><td>Paid</td><td class="right">{{ sale.paid }}</td></tr>
+    {% if sale.remaining > 0 %}
+      <tr><td>Due</td><td class="right">{{ sale.remaining }}</td></tr>
+    {% elif sale.remaining < 0 %}
+      <tr><td>Change Given</td><td class="right">{{ sale.remaining|cut:"-" }}</td></tr>
+    {% endif %}
+  </table>
+
+  {% if sale.customer %}{% if sale.payments.all or sale.payment_allocations.all %}
+  <p style="margin-top:14px;"><strong>Payment History</strong></p>
+  <table>
+    <thead><tr><th>Date</th><th>Account</th><th class="right">Amount</th></tr></thead>
+    <tbody>
+    {% for p in sale.payments.all %}
+      <tr><td>{{ p.date }}</td><td>{{ p.account.name }}</td><td class="right">{{ p.amount }}</td></tr>
+    {% endfor %}
+    {% for a in sale.payment_allocations.all %}
+      <tr><td>{{ a.payment.date }}</td><td>{{ a.payment.account.name }}</td><td class="right">{{ a.amount }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}{% endif %}
+
+  {% if store_settings.invoice_footer %}
+  <div class="footer">{{ store_settings.invoice_footer }}</div>
+  {% endif %}
+</body>
+</html>

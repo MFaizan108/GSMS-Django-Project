@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Day Closing {{ closing.date }}{% endblock %}
+{% block content %}
+<h3>Day Closing — {{ closing.date }}</h3>
+<div class="card card-stat p-4" style="max-width:450px;">
+  <table class="table table-sm">
+    <tr><td>Opening Cash</td><td class="text-end">{{ closing.opening_cash }}</td></tr>
+    <tr><td>+ Cash Sales</td><td class="text-end">{{ closing.cash_sales }}</td></tr>
+    <tr><td>+ Customer Cash Payments</td><td class="text-end">{{ closing.customer_cash_payments }}</td></tr>
+    <tr><td>+ Other Cash Income</td><td class="text-end">{{ closing.other_cash_income }}</td></tr>
+    <tr><td>- Cash Purchases</td><td class="text-end">{{ closing.cash_purchases }}</td></tr>
+    <tr><td>- Supplier Cash Payments</td><td class="text-end">{{ closing.supplier_cash_payments }}</td></tr>
+    <tr><td>- Expenses</td><td class="text-end">{{ closing.expenses }}</td></tr>
+    <tr><td>- Withdrawals</td><td class="text-end">{{ closing.withdrawals }}</td></tr>
+    <tr class="border-top"><td><strong>= Expected Cash</strong></td><td class="text-end"><strong>{{ closing.expected_cash }}</strong></td></tr>
+    <tr><td>Actual Cash</td><td class="text-end">{{ closing.actual_cash }}</td></tr>
+    <tr>
+      <td><strong>Difference</strong></td>
+      <td class="text-end {% if closing.difference > 0 %}text-success{% elif closing.difference < 0 %}text-danger{% endif %}"><strong>{{ closing.difference }}</strong></td>
+    </tr>
+  </table>
+  {% if closing.note %}<p class="text-muted small">{{ closing.note }}</p>{% endif %}
+</div>
+{% endblock %}

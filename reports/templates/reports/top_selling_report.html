@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Top Selling Products{% endblock %}
+{% block content %}
+<h3>Top Selling Products</h3>
+<div class="card card-stat p-3">
+<table class="table"><thead><tr><th>#</th><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr></thead>
+<tbody>{% for i in items %}<tr><td>{{ forloop.counter }}</td><td>{{ i.product__name }}</td><td>{{ i.total_qty }}</td><td>{{ i.total_revenue }}</td></tr>
+{% empty %}<tr><td colspan="4" class="text-center text-muted">No sales data yet.</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endblock %}

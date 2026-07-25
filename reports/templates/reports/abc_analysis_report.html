@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}ABC Analysis{% endblock %}
+{% block content %}
+<h3>ABC Analysis</h3>
+{% include "reports/_date_filter.html" %}
+<div class="card card-stat p-3 mb-3"><strong>Total Revenue: {{ total_revenue }}</strong></div>
+<div class="card card-stat p-3">
+<table class="table"><thead><tr><th>Product</th><th>Revenue</th><th>Cumulative %</th><th>Class</th></tr></thead>
+<tbody>{% for r in rows %}
+<tr>
+  <td>{{ r.product__name }}</td>
+  <td>{{ r.revenue }}</td>
+  <td>{{ r.cumulative_pct|floatformat:1 }}%</td>
+  <td>
+    {% if r.klass == 'A' %}<span class="badge bg-success">A</span>
+    {% elif r.klass == 'B' %}<span class="badge bg-warning text-dark">B</span>
+    {% else %}<span class="badge bg-secondary">C</span>{% endif %}
+  </td>
+</tr>
+{% empty %}<tr><td colspan="4" class="text-center text-muted">No sales in this range.</td></tr>{% endfor %}</tbody></table>
+</div>
+<p class="form-text">A = top 80% of revenue, B = next 15%, C = remaining 5% — the classic Pareto split for prioritising which products matter most.</p>
+{% endblock %}

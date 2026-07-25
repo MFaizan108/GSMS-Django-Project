@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block content_noauth %}
+<div class="auth-shell">
+  <div class="auth-brand">
+    <div class="auth-brand-inner">
+      {% if store_settings.logo %}
+        <img src="{{ store_settings.logo.url }}" alt="{{ store_settings.store_name }}" class="auth-brand-logo">
+      {% else %}
+        <div class="auth-brand-logo auth-brand-logo-fallback"><i class="bi bi-shop"></i></div>
+      {% endif %}
+      <h1 class="auth-brand-title">{{ store_settings.store_name|default:"GSMS" }}</h1>
+      <p class="auth-brand-tagline">Store Management System</p>
+      <ul class="auth-brand-points">
+        <li><i class="bi bi-check-circle-fill"></i> Sales &amp; Purchases ek hi jagah</li>
+        <li><i class="bi bi-check-circle-fill"></i> Live stock &amp; profit tracking</li>
+        <li><i class="bi bi-check-circle-fill"></i> Customer khata (ledger) automatically</li>
+      </ul>
+    </div>
+  </div>
+  <div class="auth-form-panel">
+    <div class="auth-form-card">
+      <h3 class="mb-1">Welcome back</h3>
+      <p class="text-muted mb-4">Apne account mein login karein</p>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label">Username</label>
+          <div class="input-icon-group">
+            <i class="bi bi-person"></i>
+            <input type="text" name="username" class="form-control" placeholder="Username" required autofocus>
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Password</label>
+          <div class="input-icon-group">
+            <i class="bi bi-lock"></i>
+            <input type="password" name="password" id="loginPassword" class="form-control" placeholder="Password" required>
+            <button type="button" class="input-icon-toggle" id="togglePassword" tabindex="-1" aria-label="Show password">
+              <i class="bi bi-eye" id="toggleIcon"></i>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100 py-2">
+          <i class="bi bi-box-arrow-in-right"></i> Login
+        </button>
+      </form>
+    </div>
+    <p class="auth-footer">&copy; {% now "Y" %} {{ store_settings.store_name|default:"GSMS" }}. All rights reserved.</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var toggle = document.getElementById('togglePassword');
+    var pwd = document.getElementById('loginPassword');
+    var icon = document.getElementById('toggleIcon');
+    if (!toggle) return;
+    toggle.addEventListener('click', function () {
+      var isPassword = pwd.type === 'password';
+      pwd.type = isPassword ? 'text' : 'password';
+      icon.className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
+    });
+  })();
+</script>
+{% endblock %}

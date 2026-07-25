@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Suppliers{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Suppliers</h3>
+  <a href="{% url 'suppliers:supplier_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Supplier</a>
+</div>
+<div class="card card-stat p-3">
+<table class="table table-hover align-middle">
+<thead><tr><th>Name</th><th>Company</th><th>Phone</th><th>Balance</th><th>Actions</th></tr></thead>
+<tbody>
+{% for s in suppliers %}
+<tr>
+  <td><a href="{% url 'suppliers:supplier_detail' s.pk %}">{{ s.name }}</a></td>
+  <td>{{ s.company }}</td><td>{{ s.phone }}</td>
+  <td class="{% if s.current_balance > 0 %}text-danger{% endif %}">{{ s.current_balance }}</td>
+  <td>
+    <a href="{% url 'suppliers:supplier_edit' s.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+    <form method="post" action="{% url 'suppliers:supplier_delete' s.pk %}" class="d-inline" onsubmit="return confirm('Delete this supplier?');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+    </form>
+  </td>
+</tr>
+{% empty %}<tr><td colspan="5" class="text-center text-muted">No suppliers yet.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

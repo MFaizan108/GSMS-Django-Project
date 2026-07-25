@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Profit Report{% endblock %}
+{% block content %}
+<h3>Profit Report</h3>
+{% include "reports/_date_filter.html" %}
+<div class="row g-3">
+  <div class="col-md-3"><div class="card card-stat p-3 text-center"><small class="text-muted">Total Sales</small><h4>{{ total_sales }}</h4></div></div>
+  <div class="col-md-3"><div class="card card-stat p-3 text-center"><small class="text-muted">Gross Profit</small><h4 class="text-success">{{ total_profit }}</h4></div></div>
+  <div class="col-md-3"><div class="card card-stat p-3 text-center"><small class="text-muted">Expenses</small><h4 class="text-danger">{{ total_expenses }}</h4></div></div>
+  <div class="col-md-3"><div class="card card-stat p-3 text-center"><small class="text-muted">Net Profit</small><h4 class="text-primary">{{ net_profit }}</h4></div></div>
+</div>
+{% endblock %}

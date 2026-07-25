@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Customer Balance Report{% endblock %}
+{% block content %}
+<h3>Customer Balance Report</h3>
+<div class="card card-stat p-3 mb-3"><strong>Total Receivable: {{ total }}</strong></div>
+<div class="card card-stat p-3">
+<table class="table"><thead><tr><th>Customer</th><th>Phone</th><th>Balance Owed</th></tr></thead>
+<tbody>{% for c in customers %}<tr><td>{{ c.name }}</td><td>{{ c.phone }}</td><td class="text-danger">{{ c.current_balance }}</td></tr>
+{% empty %}<tr><td colspan="3" class="text-center text-muted">No outstanding customer balances.</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endblock %}

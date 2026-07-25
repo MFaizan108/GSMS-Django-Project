@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Sale {{ sale.invoice_no }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 no-print">
+  <h3 class="mb-0">Sale Invoice #{{ sale.invoice_no }}
+    {% if sale.status == 'cancelled' %}<span class="badge bg-secondary align-middle">Cancelled</span>{% endif %}
+  </h3>
+  <div class="d-flex gap-2">
+    <a href="{% url 'sales:sale_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Sales</a>
+    {% if can_return %}
+    <a href="{% url 'sales:sales_return_create' sale.pk %}" class="btn btn-outline-warning btn-sm"><i class="bi bi-arrow-return-left"></i> Return Items</a>
+    {% endif %}
+    {% if can_cancel %}
+    <form method="post" action="{% url 'sales:sale_cancel' sale.pk %}" onsubmit="return confirm('Cancel Sale #{{ sale.invoice_no }}? Stock will be restocked and the ledger reversed. This cannot be undone.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-x-circle"></i> Cancel Invoice</button>
+    </form>
+    {% endif %}
+    <a href="{% url 'sales:sale_invoice_pdf' sale.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+    {% if whatsapp_link %}
+    <a href="{{ whatsapp_link }}" target="gsms_whatsapp" rel="noopener" class="btn btn-outline-success btn-sm"><i class="bi bi-whatsapp"></i> WhatsApp</a>
+    {% endif %}
+    {% if store_settings.smtp_host and sale.customer.email %}
+    <form method="post" action="{% url 'sales:sale_email_invoice' sale.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-envelope"></i> Email</button>
+    </form>
+    {% endif %}
+    <button type="button" class="btn btn-primary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Print Bill</button>
+  </div>
+</div>
+
+<div id="invoicePrintArea">
+  <div class="text-center mb-3">
+    {% if store_settings.logo %}<img src="{{ store_settings.logo.url }}" alt="" style="height:60px; object-fit:contain;" class="mb-2"><br>{% endif %}
+    <h4 class="mb-1 fw-bold">{{ store_settings.store_name|default:"GSMS" }}</h4>
+    {% if store_settings.owner_name %}<div class="small">Owner: {{ store_settings.owner_name }}</div>{% endif %}
+    {% if store_settings.phone %}<div class="small">Phone: {{ store_settings.phone }}</div>{% endif %}
+    {% if store_settings.address %}<div class="small">{{ store_settings.address }}</div>{% endif %}
+    <hr>
+  </div>
+
+  <div class="card card-stat p-3 mb-3">
+    <p class="mb-0">
+      <strong>Invoice #:</strong> {{ sale.invoice_no }} &nbsp;|&nbsp;
+      <strong>Customer:</strong> {{ sale.customer|default:"Walk-in" }} &nbsp;|&nbsp;
+      <strong>Date:</strong> {{ sale.date }} &nbsp;|&nbsp;
+      <strong>Type:</strong> {{ sale.get_payment_type_display }}
+    </p>
+  </div>
+  <div class="card card-stat p-3 mb-3">
+  <table class="table">
+  <thead><tr><th>Product</th><th>Qty</th><th>Selling Price</th>{% if user.is_manager %}<th class="no-print">Cost</th>{% endif %}<th>Total</th>{% if user.is_manager %}<th class="no-print">Profit</th>{% endif %}</tr></thead>
+  <tbody>
+  {% for i in sale.items.all %}
+  <tr>
+    <td>{{ i.product }}</td><td>{{ i.quantity }}</td><td>{{ i.selling_price }}</td>
+    {% if user.is_manager %}<td class="no-print">{{ i.cost_price_at_sale }}</td>{% endif %}<td>{{ i.line_total }}</td>
+    {% if user.is_manager %}<td class="text-success no-print">{{ i.profit }}</td>{% endif %}
+  </tr>
+  {% endfor %}
+  </tbody>
+  </table>
+  </div>
+  <div class="card card-stat p-3" style="max-width:400px;">
+    <p>Subtotal: {{ sale.subtotal }}</p>
+    <p>Discount: {{ sale.discount }}</p>
+    <p>Tax: {{ sale.tax }}</p>
+    <p><strong>Total: {{ sale.total }}</strong></p>
+    <p>Paid (Amount Received): {{ sale.paid }}</p>
+    {% if sale.remaining > 0 %}
+      <p class="text-danger"><strong>Baqaya (Due): {{ sale.remaining }}</strong></p>
+    {% elif sale.remaining < 0 %}
+      <p class="text-success"><strong>Wapis Kiye (Change Given): {{ sale.remaining|cut:"-" }}</strong></p>
+    {% else %}
+      <p class="text-success"><strong>Fully Paid — koi baqaya ya wapsi nahi.</strong></p>
+    {% endif %}
+    {% if user.is_manager %}<p class="text-success no-print"><strong>Total Profit: {{ sale.total_profit }}</strong></p>{% endif %}
+  </div>
+
+  {% if sale.customer %}
+  <div class="card card-stat p-3" style="max-width:400px;">
+    <h6>Payments</h6>
+    <table class="table table-sm">
+      <thead><tr><th>Date</th><th>Account</th><th>Amount</th></tr></thead>
+      <tbody>
+      {% for p in sale.payments.all %}
+        <tr><td>{{ p.date }}</td><td>{{ p.account.name }}</td><td>{{ p.amount }}</td></tr>
+      {% endfor %}
+      {% for a in sale.payment_allocations.all %}
+        <tr><td>{{ a.payment.date }}</td><td>{{ a.payment.account.name }}</td><td>{{ a.amount }}</td></tr>
+      {% endfor %}
+      {% if not sale.payments.all and not sale.payment_allocations.all %}
+        <tr><td colspan="3" class="text-center text-muted">No payments yet.</td></tr>
+      {% endif %}
+      </tbody>
+    </table>
+    {% if sale.remaining > 0 %}
+    <form method="post" action="{% url 'sales:sale_add_payment' sale.pk %}" class="mt-2 pt-2 border-top no-print">
+      {% csrf_token %}
+      <div class="row g-2">
+        {% for field in payment_form %}
+          <div class="col-6">
+            <label class="form-label small text-muted mb-1">{{ field.label }}</label>
+            {{ field }}
+          </div>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn btn-success btn-sm mt-2">Record Payment</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if sale.returns.all %}
+  <div class="card card-stat p-3 no-print" style="max-width:400px;">
+    <h6>Returns</h6>
+    <table class="table table-sm">
+      <thead><tr><th>Return #</th><th>Date</th><th>Refund</th></tr></thead>
+      <tbody>
+      {% for r in sale.returns.all %}
+        <tr><td><a href="{% url 'sales:sales_return_detail' r.pk %}">{{ r.return_no }}</a></td><td>{{ r.date }}</td><td>{{ r.total_refund }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if store_settings.invoice_footer %}
+  <div class="text-center text-muted small mt-3">{{ store_settings.invoice_footer }}</div>
+  {% endif %}
+</div>
+{% endblock %}

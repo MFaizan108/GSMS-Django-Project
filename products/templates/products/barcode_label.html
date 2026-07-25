@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Barcode — {{ product.name }}{% endblock %}
+{% block content %}
+<div class="no-print d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">Barcode Labels — {{ product.name }}</h3>
+  <div>
+    <form method="get" class="d-inline-flex gap-2 align-items-center">
+      <label class="form-label mb-0 small text-muted">Copies</label>
+      <input type="number" name="qty" min="1" max="100" value="{{ copies|length }}" class="form-control form-control-sm" style="width:80px;">
+      <button type="submit" class="btn btn-outline-secondary btn-sm">Update</button>
+    </form>
+    <button type="button" class="btn btn-primary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+    <a href="{% url 'products:product_detail' product.pk %}" class="btn btn-secondary btn-sm">Back</a>
+  </div>
+</div>
+
+<div class="label-sheet d-flex flex-wrap gap-2">
+  {% for _ in copies %}
+  <div class="label-card text-center p-2 border">
+    <div class="small fw-semibold text-truncate" style="max-width:200px;">{{ product.name }}</div>
+    <img src="{{ barcode_image }}" alt="{{ product.barcode }}" style="max-width:200px;">
+    <div class="small">{{ product.barcode }}</div>
+    <div class="fw-bold">{{ product.retail_price }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<style>
+@media print {
+  .label-card { break-inside: avoid; }
+}
+</style>
+{% endblock %}

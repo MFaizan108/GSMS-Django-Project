@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Add Expense{% endblock %}
+{% block content %}
+<h3>Add Expense</h3>
+<div class="card card-stat p-4" style="max-width:500px;">
+<form method="post">
+  {% csrf_token %}
+  {% for field in form %}
+    <div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}</div>
+  {% endfor %}
+  <button type="submit" class="btn btn-primary">Save</button>
+</form>
+</div>
+{% endblock %}

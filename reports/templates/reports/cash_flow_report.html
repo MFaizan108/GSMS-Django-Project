@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Cash Flow Report{% endblock %}
+{% block content %}
+<h3>Cash Flow Report</h3>
+{% include "reports/_date_filter.html" %}
+<div class="row g-3">
+  <div class="col-md-4"><div class="card card-stat p-3 text-center"><small class="text-muted">Cash In</small><h4 class="text-success">{{ cash_in }}</h4></div></div>
+  <div class="col-md-4"><div class="card card-stat p-3 text-center"><small class="text-muted">Cash Out</small><h4 class="text-danger">{{ cash_out }}</h4></div></div>
+  <div class="col-md-4"><div class="card card-stat p-3 text-center"><small class="text-muted">Net Cash Flow</small><h4 class="{% if net_cash >= 0 %}text-success{% else %}text-danger{% endif %}">{{ net_cash }}</h4></div></div>
+</div>
+<div class="card card-stat p-3 mt-3">
+  <h6>By Account (Cash / Bank / Wallet)</h6>
+  <table class="table table-sm">
+    <thead><tr><th>Code</th><th>Account</th><th>In</th><th>Out</th><th>Net</th></tr></thead>
+    <tbody>
+    {% for row in by_account %}
+      <tr>
+        <td>{{ row.account__code }}</td>
+        <td>{{ row.account__name }}</td>
+        <td class="text-success">{{ row.debit|default:0 }}</td>
+        <td class="text-danger">{{ row.credit|default:0 }}</td>
+        <td class="{% if row.net >= 0 %}text-success{% else %}text-danger{% endif %}">{{ row.net }}</td>
+      </tr>
+    {% empty %}<tr><td colspan="5" class="text-center text-muted">No cash movement in this period.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

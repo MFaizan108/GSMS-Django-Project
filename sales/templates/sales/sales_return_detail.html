@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Sales Return {{ sales_return.return_no }}{% endblock %}
+{% block content %}
+<h3>Sales Return #{{ sales_return.return_no }}</h3>
+<div class="card card-stat p-3 mb-3">
+  <p><strong>Sale:</strong> <a href="{% url 'sales:sale_detail' sales_return.sale.pk %}">{{ sales_return.sale.invoice_no }}</a>
+   | <strong>Date:</strong> {{ sales_return.date }}
+   {% if sales_return.note %}| <strong>Note:</strong> {{ sales_return.note }}{% endif %}</p>
+</div>
+<div class="card card-stat p-3 mb-3">
+<table class="table">
+<thead><tr><th>Product</th><th>Qty</th><th>Condition</th><th>Unit Price</th><th>Line Total</th><th>Unit Cost</th><th>Profit Reversed</th></tr></thead>
+<tbody>
+{% for i in sales_return.items.all %}
+<tr>
+  <td>{{ i.sale_item.product }}</td>
+  <td>{{ i.quantity }}</td>
+  <td>
+    {% if i.condition == 'good' %}<span class="badge bg-success">Good</span>
+    {% elif i.condition == 'damaged' %}<span class="badge bg-danger">Damaged</span>
+    {% else %}<span class="badge bg-warning text-dark">Expired</span>{% endif %}
+  </td>
+  <td>{{ i.unit_price }}</td>
+  <td>{{ i.line_total }}</td>
+  <td>{{ i.unit_cost }}</td>
+  <td>{{ i.profit_reversed }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+<div class="card card-stat p-3" style="max-width:300px;">
+  <p><strong>Total Refund: {{ sales_return.total_refund }}</strong></p>
+</div>
+{% endblock %}

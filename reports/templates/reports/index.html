@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<h3 class="mb-4">Reports</h3>
+<div class="row g-3">
+  {% for url_name, label, icon in reports %}{% endfor %}
+  <div class="col-md-3"><a href="{% url 'reports:sales_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-cart-check fs-2"></i><div>Sales Report</div></div></a></div>
+  <div class="col-md-3"><a href="{% url 'reports:purchase_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-cart-plus fs-2"></i><div>Purchase Report</div></div></a></div>
+  {% if user.is_manager %}
+  <div class="col-md-3"><a href="{% url 'reports:profit_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-graph-up fs-2"></i><div>Profit Report</div></div></a></div>
+  <div class="col-md-3"><a href="{% url 'reports:expense_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-cash-coin fs-2"></i><div>Expense Report</div></div></a></div>
+  {% endif %}
+  <div class="col-md-3"><a href="{% url 'reports:stock_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-box-seam fs-2"></i><div>Stock Report</div></div></a></div>
+  <div class="col-md-3"><a href="{% url 'reports:expiry_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-clock-history fs-2"></i><div>Expiry Report</div></div></a></div>
+  <div class="col-md-3"><a href="{% url 'reports:low_stock_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-exclamation-triangle fs-2"></i><div>Low Stock Report</div></div></a></div>
+  <div class="col-md-3"><a href="{% url 'reports:top_selling_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-trophy fs-2"></i><div>Top Selling Products</div></div></a></div>
+  <div class="col-md-3"><a href="{% url 'reports:least_selling_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-graph-down fs-2"></i><div>Least Selling Products</div></div></a></div>
+  <div class="col-md-3"><a href="{% url 'reports:customer_balance_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-people fs-2"></i><div>Customer Balance Report</div></div></a></div>
+  <div class="col-md-3"><a href="{% url 'reports:payment_collection_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-cash-coin fs-2"></i><div>Payment Collection Report</div></div></a></div>
+  <div class="col-md-3"><a href="{% url 'reports:supplier_balance_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-truck fs-2"></i><div>Supplier Balance Report</div></div></a></div>
+  {% if user.is_manager %}
+  <div class="col-md-3"><a href="{% url 'reports:cash_flow_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-cash-stack fs-2"></i><div>Cash Flow Report</div></div></a></div>
+  <div class="col-md-3"><a href="{% url 'reports:stock_movement_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-arrow-left-right fs-2"></i><div>Stock Movement</div></div></a></div>
+  <div class="col-md-3"><a href="{% url 'reports:inventory_valuation_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-wallet2 fs-2"></i><div>Inventory Valuation</div></div></a></div>
+  <div class="col-md-3"><a href="{% url 'reports:abc_analysis_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-pie-chart fs-2"></i><div>ABC Analysis</div></div></a></div>
+  <div class="col-md-3"><a href="{% url 'reports:dead_stock_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-hourglass-bottom fs-2"></i><div>Dead Stock</div></div></a></div>
+  <div class="col-md-3"><a href="{% url 'finance:day_closing_list' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-calculator fs-2"></i><div>Day Closing</div></div></a></div>
+  <div class="col-md-3"><a href="{% url 'reports:account_reconciliation_report' %}" class="text-decoration-none"><div class="card card-stat p-3 text-center"><i class="bi bi-check2-square fs-2"></i><div>Account Reconciliation</div></div></a></div>
+  {% endif %}
+</div>
+{% endblock %}

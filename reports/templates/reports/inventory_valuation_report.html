@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Inventory Valuation Report{% endblock %}
+{% block content %}
+<h3>Inventory Valuation Report</h3>
+<div class="card card-stat p-3 mb-3"><strong>Total Inventory Value: {{ total_value }}</strong></div>
+<div class="card card-stat p-3">
+<table class="table"><thead><tr><th>Product</th><th>Remaining Qty</th><th>Value</th></tr></thead>
+<tbody>{% for r in rows %}<tr><td>{{ r.product__name }}</td><td>{{ r.qty }}</td><td>{{ r.value }}</td></tr>
+{% empty %}<tr><td colspan="3" class="text-center text-muted">No stock in any batch.</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endblock %}

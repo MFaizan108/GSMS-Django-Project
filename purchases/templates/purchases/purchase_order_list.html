@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Purchase Orders{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="mb-0">Purchase Orders</h3>
+  <a href="{% url 'purchases:purchase_order_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Order</a>
+</div>
+<div class="card card-stat p-3">
+<table class="table table-hover align-middle">
+<thead><tr><th>Order #</th><th>Supplier</th><th>Warehouse</th><th>Date</th><th>Status</th><th>Expected Total</th></tr></thead>
+<tbody>
+{% for o in orders %}
+<tr>
+  <td><a href="{% url 'purchases:purchase_order_detail' o.pk %}">{{ o.order_no }}</a></td>
+  <td>{{ o.supplier }}</td>
+  <td>{{ o.warehouse }}</td>
+  <td>{{ o.date }}</td>
+  <td>
+    {% if o.status == 'received' %}<span class="badge bg-success">{{ o.get_status_display }}</span>
+    {% elif o.status == 'partially_received' %}<span class="badge bg-warning text-dark">{{ o.get_status_display }}</span>
+    {% elif o.status == 'cancelled' %}<span class="badge bg-secondary">{{ o.get_status_display }}</span>
+    {% else %}<span class="badge bg-info text-dark">{{ o.get_status_display }}</span>{% endif %}
+  </td>
+  <td>{{ o.total_expected }}</td>
+</tr>
+{% empty %}<tr><td colspan="6" class="text-center text-muted">No purchase orders yet.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

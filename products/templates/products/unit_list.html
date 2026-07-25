@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Units{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Units</h3>
+  <a href="{% url 'products:unit_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Unit</a>
+</div>
+<div class="card card-stat p-3">
+<table class="table table-hover">
+<thead><tr><th>Name</th><th>Short Name</th><th>Actions</th></tr></thead>
+<tbody>
+{% for u in units %}
+<tr><td>{{ u.name }}</td><td>{{ u.short_name }}</td>
+<td>
+  <form method="post" action="{% url 'products:unit_delete' u.pk %}" onsubmit="return confirm('Delete?');">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+  </form>
+</td></tr>
+{% empty %}<tr><td colspan="3" class="text-center text-muted">No units yet.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

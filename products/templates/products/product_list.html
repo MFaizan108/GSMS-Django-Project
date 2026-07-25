@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Products{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Products{% if category %} <small class="text-muted">— {{ category.name }}</small>{% endif %}</h3>
+  <div class="d-flex gap-2">
+    <a href="{% url 'products:product_export_excel' %}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+    {% if user.is_manager %}
+    <a href="{% url 'products:product_import_excel' %}" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> Import Excel</a>
+    {% endif %}
+    <a href="{% url 'products:product_create' %}{% if category %}?category={{ category.pk }}{% endif %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Product</a>
+  </div>
+</div>
+<form method="get" class="mb-3 d-flex align-items-center gap-2">
+  <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Search by name, barcode or SKU..." style="max-width:400px;">
+  {% if category %}
+    <input type="hidden" name="category" value="{{ category.pk }}">
+    <a href="{% url 'products:product_list' %}" class="btn btn-outline-secondary">Clear filter</a>
+  {% endif %}
+</form>
+<div class="card card-stat p-3">
+<table class="table table-hover align-middle">
+<thead><tr><th>Name</th><th>Category</th><th>Stock</th><th>Purchase</th><th>Selling</th><th>Expiry</th><th>Status</th><th>Actions</th></tr></thead>
+<tbody>
+{% for p in products %}
+<tr class="{% if p.is_expired %}table-danger{% elif p.is_low_stock %}table-warning{% endif %}">
+  <td><a href="{% url 'products:product_detail' p.pk %}">{{ p.name }}</a></td>
+  <td>{{ p.category|default:"-" }}</td>
+  <td>{{ p.stock }} {{ p.unit.short_name }}</td>
+  <td>{{ p.purchase_price }}</td>
+  <td>{{ p.retail_price }}</td>
+  <td>{{ p.expiry_date|default:"-" }}</td>
+  <td>
+    {% if p.is_expired %}<span class="badge bg-danger">Expired</span>
+    {% elif p.is_low_stock %}<span class="badge bg-warning text-dark">Low Stock</span>
+    {% elif p.is_near_expiry %}<span class="badge bg-info text-dark">Near Expiry</span>
+    {% else %}<span class="badge bg-success">OK</span>{% endif %}
+  </td>
+  <td>
+    <a href="{% url 'products:product_edit' p.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+    <form method="post" action="{% url 'products:product_delete' p.pk %}" class="d-inline" onsubmit="return confirm('Delete this product?');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+    </form>
+  </td>
+</tr>
+{% empty %}<tr><td colspan="8" class="text-center text-muted">No products found.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}
