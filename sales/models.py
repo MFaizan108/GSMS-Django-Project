@@ -58,7 +58,11 @@ class Sale(models.Model):
 
     @property
     def total_profit(self):
-        return sum((i.profit for i in self.items.all()), start=0)
+        # Line-item profit is gross (selling price vs. cost), so an
+        # invoice-level discount — money actually given up to the customer —
+        # has to come off here, or a discounted sale overstates profit by
+        # the discount amount.
+        return sum((i.profit for i in self.items.all()), start=0) - self.discount
 
     def recalculate(self):
         # A cancelled sale is a closed, reversed invoice — never let a later

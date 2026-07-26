@@ -7,12 +7,16 @@ class StoreSettingsForm(forms.ModelForm):
         required=False, widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'new-password'}, render_value=True),
         help_text='Leave blank to keep the current password unchanged.',
     )
+    brevo_api_key = forms.CharField(
+        required=False, widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'new-password'}, render_value=True),
+        help_text='From brevo.com (Settings → SMTP & API → API Keys). Used instead of SMTP below when set.',
+    )
 
     class Meta:
         model = StoreSettings
         fields = [
             'store_name', 'owner_name', 'phone', 'address', 'logo', 'invoice_footer', 'tax_percent', 'currency',
-            'smtp_host', 'smtp_port', 'smtp_username', 'smtp_password', 'smtp_use_tls', 'from_email',
+            'brevo_api_key', 'smtp_host', 'smtp_port', 'smtp_username', 'smtp_password', 'smtp_use_tls', 'from_email',
         ]
         widgets = {
             'store_name': forms.TextInput(attrs={'class': 'form-control'}),

@@ -14,6 +14,8 @@ def store_settings_view(request):
             store = form.save(commit=False)
             if not form.cleaned_data.get('smtp_password'):
                 store.smtp_password = settings_obj.smtp_password
+            if not form.cleaned_data.get('brevo_api_key'):
+                store.brevo_api_key = settings_obj.brevo_api_key
             store.save()
             messages.success(request, 'Settings updated.')
             return redirect('settings_app:store_settings')
