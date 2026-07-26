@@ -37,6 +37,7 @@
       </div>
       <button type="button" class="btn btn-outline-primary" id="scanBarcodeBtn"><i class="bi bi-upc-scan"></i> Scan</button>
     </div>
+    <div class="small mb-2 d-none" id="scanFeedback"></div>
 
     <div class="table-responsive">
     <table class="table align-middle" id="billTable">
@@ -172,6 +173,15 @@
 
   productSearch.addEventListener('input', function () { doProductSearch(this.value.trim()); });
 
+  const scanFeedback = document.getElementById('scanFeedback');
+  function showScanFeedback(message, isError) {
+    scanFeedback.textContent = message;
+    scanFeedback.classList.remove('d-none', 'text-success', 'text-danger');
+    scanFeedback.classList.add(isError ? 'text-danger' : 'text-success');
+    clearTimeout(showScanFeedback._t);
+    showScanFeedback._t = setTimeout(function () { scanFeedback.classList.add('d-none'); }, 4000);
+  }
+
   function lookupAndAddByCode(code) {
     const typed = code.trim();
     if (!typed) return;
@@ -183,8 +193,12 @@
         const exact = results.find(function (p) { return p.barcode && p.barcode.toLowerCase() === typed.toLowerCase(); });
         if (exact) {
           addProductToCart(exact);
+          showScanFeedback('✓ ' + exact.name + ' add ho gaya.', false);
         } else if (results.length === 1) {
           addProductToCart(results[0]);
+          showScanFeedback('✓ ' + results[0].name + ' add ho gaya.', false);
+        } else {
+          showScanFeedback('Barcode "' + typed + '" kisi product se match nahi hua. Products mein ye barcode set karein.', true);
         }
       });
   }
