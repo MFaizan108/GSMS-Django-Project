@@ -8,7 +8,7 @@ load_dotenv(BASE_DIR / '.env')  # no-op if the file doesn't exist
 
 # All three fall back to the current dev-friendly defaults, so nothing changes
 # locally. Set the env vars in production instead of editing this file.
-SECRET_KEY = config('c12f87000e2eff2059047717bef340e6')
+SECRET_KEY = config('SECRET_KEY')
 
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
