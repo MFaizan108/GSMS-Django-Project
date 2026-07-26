@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from decouple import config
 from dotenv import load_dotenv
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')  # no-op if the file doesn't exist
@@ -87,11 +88,14 @@ if os.environ.get('DB_ENGINE') == 'postgresql':
         }
     }
 else:
+    
+
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+        'default': dj_database_url.config(
+            default=config('DATABASE_URL'),
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
 
 AUTH_USER_MODEL = 'accounts.User'
