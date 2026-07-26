@@ -288,41 +288,41 @@ def record_payment(direction, amount, account, date, sale=None, purchase=None,
     if register is not None:
         account = get_or_create_register_account(register)
 
-    if sale is not None:
-        if direction != Payment.Direction.IN:
-            raise ValueError(f"Sale #{sale.invoice_no} can only take an incoming payment.")
-        locked_sale = Sale.objects.select_for_update().get(pk=sale.pk)
-        if amount > locked_sale.remaining:
-            raise ValueError(f"Cannot record {amount}: only {locked_sale.remaining} remaining on Sale #{sale.invoice_no}.")
-    if purchase is not None:
-        if direction != Payment.Direction.OUT:
-            raise ValueError(f"Purchase #{purchase.invoice_no} can only take an outgoing payment.")
-        locked_purchase = Purchase.objects.select_for_update().get(pk=purchase.pk)
-        if amount > locked_purchase.remaining:
-            raise ValueError(f"Cannot record {amount}: only {locked_purchase.remaining} remaining on Purchase #{purchase.invoice_no}.")
-
-    customer = customer or (sale.customer if sale else None)
-    supplier = supplier or (purchase.supplier if purchase else None)
-
-    if customer is not None:
-        party_account = get_or_create_party_account(customer, Account.Type.ASSET, Account.Subtype.AR)
-    elif supplier is not None:
-        party_account = get_or_create_party_account(supplier, Account.Type.LIABILITY, Account.Subtype.AP)
-    else:
-        raise ValueError("A payment must be linked to a customer or a supplier.")
-
-    memo_bits = [b for b in [
-        f"Sale #{sale.invoice_no}" if sale else None,
-        f"Purchase #{purchase.invoice_no}" if purchase else None,
-    ] if b]
-    memo = note or (' / '.join(memo_bits) or 'Payment')
-
-    if direction == Payment.Direction.IN:
-        lines = [(account, LedgerEntry.EntryType.DEBIT, amount), (party_account, LedgerEntry.EntryType.CREDIT, amount)]
-    else:
-        lines = [(party_account, LedgerEntry.EntryType.DEBIT, amount), (account, LedgerEntry.EntryType.CREDIT, amount)]
-
     with transaction.atomic():
+        if sale is not None:
+            if direction != Payment.Direction.IN:
+                raise ValueError(f"Sale #{sale.invoice_no} can only take an incoming payment.")
+            locked_sale = Sale.objects.select_for_update().get(pk=sale.pk)
+            if amount > locked_sale.remaining:
+                raise ValueError(f"Cannot record {amount}: only {locked_sale.remaining} remaining on Sale #{sale.invoice_no}.")
+        if purchase is not None:
+            if direction != Payment.Direction.OUT:
+                raise ValueError(f"Purchase #{purchase.invoice_no} can only take an outgoing payment.")
+            locked_purchase = Purchase.objects.select_for_update().get(pk=purchase.pk)
+            if amount > locked_purchase.remaining:
+                raise ValueError(f"Cannot record {amount}: only {locked_purchase.remaining} remaining on Purchase #{purchase.invoice_no}.")
+
+        customer = customer or (sale.customer if sale else None)
+        supplier = supplier or (purchase.supplier if purchase else None)
+
+        if customer is not None:
+            party_account = get_or_create_party_account(customer, Account.Type.ASSET, Account.Subtype.AR)
+        elif supplier is not None:
+            party_account = get_or_create_party_account(supplier, Account.Type.LIABILITY, Account.Subtype.AP)
+        else:
+            raise ValueError("A payment must be linked to a customer or a supplier.")
+
+        memo_bits = [b for b in [
+            f"Sale #{sale.invoice_no}" if sale else None,
+            f"Purchase #{purchase.invoice_no}" if purchase else None,
+        ] if b]
+        memo = note or (' / '.join(memo_bits) or 'Payment')
+
+        if direction == Payment.Direction.IN:
+            lines = [(account, LedgerEntry.EntryType.DEBIT, amount), (party_account, LedgerEntry.EntryType.CREDIT, amount)]
+        else:
+            lines = [(party_account, LedgerEntry.EntryType.DEBIT, amount), (account, LedgerEntry.EntryType.CREDIT, amount)]
+
         txn = post_transaction(date=date, memo=memo, lines=lines, reference=reference, created_by=created_by)
         payment = Payment.objects.create(
             sale=sale, purchase=purchase, customer=customer, supplier=supplier,
