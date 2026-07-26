@@ -12,20 +12,9 @@ class StoreSettings(models.Model):
     currency = models.CharField(max_length=10, default='PKR')
 
     # Outgoing email (invoice sending), read fresh at send-time by
-    # core.mail.send_store_email — never cached into django.conf.settings,
-    # so changing these here takes effect immediately, no server restart
-    # needed.
-    #
-    # Preferred: Brevo's HTTP API (core.mail uses this whenever a key is
-    # set) — most PaaS hosts (including Render) block outbound raw SMTP
-    # traffic to stop spam abuse, but an HTTPS API call always gets through
-    # since blocking port 443 would break the platform itself.
-    brevo_api_key = models.CharField(
-        max_length=255, blank=True,
-        help_text='From brevo.com (free tier) — used instead of SMTP below when set, since most hosts block outgoing SMTP.',
-    )
-    # Fallback / local-dev option — works fine on a normal network, just not
-    # reliably from most hosting platforms.
+    # core.mail.get_store_email_connection — never cached into
+    # django.conf.settings, so changing these here takes effect immediately,
+    # no server restart needed.
     smtp_host = models.CharField(max_length=255, blank=True)
     smtp_port = models.PositiveIntegerField(null=True, blank=True, default=587)
     smtp_username = models.CharField(max_length=255, blank=True)

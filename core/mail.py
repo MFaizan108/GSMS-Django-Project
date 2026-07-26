@@ -1,45 +1,11 @@
-import base64
 import socket
 from contextlib import contextmanager
 
-import requests
 from django.core.mail import get_connection, EmailMessage
 
 
 class EmailNotConfigured(Exception):
     pass
-
-
-BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email'
-
-
-def _send_via_brevo(store, subject, body, to, attachments):
-    """Brevo's HTTPS API — this is the reliable path on hosts like Render
-    that block outbound raw SMTP traffic (port 443 always gets through,
-    since blocking it would break the platform itself)."""
-    payload = {
-        'sender': {'name': store.store_name or 'Store', 'email': store.from_email},
-        'to': [{'email': to}],
-        'subject': subject,
-        'textContent': body,
-    }
-    if attachments:
-        payload['attachment'] = [
-            {'name': filename, 'content': base64.b64encode(content).decode('ascii')}
-            for filename, content, _mimetype in attachments
-        ]
-    resp = requests.post(
-        BREVO_API_URL,
-        json=payload,
-        headers={'api-key': store.brevo_api_key, 'Accept': 'application/json', 'Content-Type': 'application/json'},
-        timeout=15,
-    )
-    if resp.status_code >= 300:
-        try:
-            detail = resp.json().get('message', resp.text)
-        except ValueError:
-            detail = resp.text
-        raise RuntimeError(f"Brevo rejected the email ({resp.status_code}): {detail}")
 
 
 @contextmanager
@@ -69,11 +35,18 @@ def _force_ipv4():
         socket.getaddrinfo = original_getaddrinfo
 
 
-def _send_via_smtp(store, subject, body, to, attachments):
-    """Fallback for local dev / networks that actually allow outgoing SMTP.
-    Most PaaS hosts (Render included) block this outright — see
-    _force_ipv4's docstring and _send_via_brevo above for why the API path
-    is what's actually reliable in production."""
+def send_store_email(subject, body, to, attachments=None):
+    """Send an email using the SMTP settings stored in StoreSettings (set via
+    the Settings page, not settings.py/.env) — read fresh on every call, so
+    changing them in the UI takes effect immediately.
+
+    `attachments`: optional list of (filename, content_bytes, mimetype)."""
+    from settings_app.models import StoreSettings
+
+    store = StoreSettings.get_solo()
+    if not store.smtp_host or not store.from_email:
+        raise EmailNotConfigured("Email is not configured yet — set SMTP host and From address in Settings.")
+
     port = store.smtp_port or 587
     # Port 465 is implicit-SSL only (STARTTLS on it fails silently/hangs);
     # 587 (and everything else) expects STARTTLS. There's no separate
@@ -98,27 +71,3 @@ def _send_via_smtp(store, subject, body, to, attachments):
         message.attach(filename, content, mimetype)
     with _force_ipv4():
         message.send()
-
-
-def send_store_email(subject, body, to, attachments=None):
-    """Send an email using the settings stored in StoreSettings (set via the
-    Settings page, not settings.py/.env) — read fresh on every call, so
-    changing them in the UI takes effect immediately.
-
-    Uses Brevo's HTTP API whenever an API key is configured (the reliable
-    option on most hosting platforms); otherwise falls back to SMTP.
-
-    `attachments`: optional list of (filename, content_bytes, mimetype)."""
-    from settings_app.models import StoreSettings
-
-    store = StoreSettings.get_solo()
-    if not store.from_email:
-        raise EmailNotConfigured("Email is not configured yet — set a From address in Settings.")
-
-    if store.brevo_api_key:
-        _send_via_brevo(store, subject, body, to, attachments)
-        return
-
-    if not store.smtp_host:
-        raise EmailNotConfigured("Email is not configured yet — set a Brevo API key or SMTP host in Settings.")
-    _send_via_smtp(store, subject, body, to, attachments)
