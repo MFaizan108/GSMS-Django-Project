@@ -24,6 +24,9 @@
 
 <header class="topbar">
   <div class="topbar-left">
+    <button class="sidebar-toggle" id="backButton" type="button" aria-label="Go back">
+      <i class="bi bi-arrow-left"></i>
+    </button>
     <button class="sidebar-toggle d-lg-none" id="sidebarToggle" type="button" aria-label="Toggle menu">
       <i class="bi bi-list"></i>
     </button>
@@ -78,36 +81,34 @@
       {% if user.is_manager %}
       {% url 'purchases:purchase_list' as url_purchases %}
       {% url 'purchases:purchase_order_list' as url_purchase_orders %}
-      {% url 'customers:customer_list' as url_customers %}
-      {% url 'suppliers:supplier_list' as url_suppliers %}
       <li class="nav-item"><a class="nav-link{% if request.path == url_purchases %} active{% endif %}" href="{{ url_purchases }}"><i class="bi bi-cart-plus"></i> Purchases</a></li>
       <li class="nav-item"><a class="nav-link{% if request.path == url_purchase_orders %} active{% endif %}" href="{{ url_purchase_orders }}"><i class="bi bi-file-earmark-text"></i> Purchase Orders</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_customers %} active{% endif %}" href="{{ url_customers }}"><i class="bi bi-people"></i> Customers</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_suppliers %} active{% endif %}" href="{{ url_suppliers }}"><i class="bi bi-truck"></i> Suppliers</a></li>
-      {% url 'reports:udhaar_home' as url_udhaar %}
-      <li class="nav-item"><a class="nav-link{% if request.path == url_udhaar %} active{% endif %}" href="{{ url_udhaar }}"><i class="bi bi-journal-text"></i> Udhaar / Ledger</a></li>
       {% endif %}
+      <li class="nav-item"><a class="nav-link{% if request.path == url_products %} active{% endif %}" href="{{ url_products }}"><i class="bi bi-box-seam"></i> Products</a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_categories %} active{% endif %}" href="{{ url_categories }}"><i class="bi bi-tags"></i> Categories</a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_brands %} active{% endif %}" href="{{ url_brands }}"><i class="bi bi-bookmark"></i> Brands</a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_units %} active{% endif %}" href="{{ url_units }}"><i class="bi bi-rulers"></i> Units of Measure</a></li>
       <li class="nav-item"><a class="nav-link{% if request.path == url_inventory %} active{% endif %}" href="{{ url_inventory }}"><i class="bi bi-boxes"></i> Stock Adjustment</a></li>
       {% if user.is_manager %}
+      {% url 'customers:customer_list' as url_customers %}
+      {% url 'suppliers:supplier_list' as url_suppliers %}
+      {% url 'reports:udhaar_home' as url_udhaar %}
       {% url 'finance:expense_list' as url_expenses %}
       {% url 'finance:income_list' as url_income %}
       {% url 'finance:day_closing_list' as url_day_closing %}
       {% url 'finance:cash_register_list' as url_cash_registers %}
+      <li class="nav-item"><a class="nav-link{% if request.path == url_customers %} active{% endif %}" href="{{ url_customers }}"><i class="bi bi-people"></i> Customers</a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_suppliers %} active{% endif %}" href="{{ url_suppliers }}"><i class="bi bi-truck"></i> Suppliers</a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_udhaar %} active{% endif %}" href="{{ url_udhaar }}"><i class="bi bi-journal-text"></i> Accounts Ledger</a></li>
       <li class="nav-item"><a class="nav-link{% if request.path == url_expenses %} active{% endif %}" href="{{ url_expenses }}"><i class="bi bi-cash-coin"></i> Expenses</a></li>
       <li class="nav-item"><a class="nav-link{% if request.path == url_income %} active{% endif %}" href="{{ url_income }}"><i class="bi bi-graph-up-arrow"></i> Other Income</a></li>
       <li class="nav-item"><a class="nav-link{% if request.path == url_day_closing %} active{% endif %}" href="{{ url_day_closing }}"><i class="bi bi-calculator"></i> Day Closing</a></li>
       <li class="nav-item"><a class="nav-link{% if request.path == url_cash_registers %} active{% endif %}" href="{{ url_cash_registers }}"><i class="bi bi-cash-stack"></i> Cash Registers</a></li>
       {% endif %}
-      <li class="nav-item"><a class="nav-link{% if request.path == url_categories %} active{% endif %}" href="{{ url_categories }}"><i class="bi bi-tags"></i> Categories</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_brands %} active{% endif %}" href="{{ url_brands }}"><i class="bi bi-bookmark"></i> Brands</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_units %} active{% endif %}" href="{{ url_units }}"><i class="bi bi-rulers"></i> Units</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_products %} active{% endif %}" href="{{ url_products }}"><i class="bi bi-box-seam"></i> Products</a></li>
       <li class="nav-item"><a class="nav-link{% if request.path == url_reports %} active{% endif %}" href="{{ url_reports }}"><i class="bi bi-bar-chart"></i> Reports</a></li>
       {% if user.is_admin %}
       {% url 'accounts:user_list' as url_users %}
-      {% url 'settings_app:store_settings' as url_settings %}
       <li class="nav-item"><a class="nav-link{% if request.path == url_users %} active{% endif %}" href="{{ url_users }}"><i class="bi bi-person-badge"></i> Users</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_settings %} active{% endif %}" href="{{ url_settings }}"><i class="bi bi-gear"></i> Settings</a></li>
       {% endif %}
     </ul>
   </nav>
@@ -149,6 +150,17 @@
       backdrop.classList.toggle('show');
     });
     backdrop.addEventListener('click', closeSidebar);
+  })();
+  (function () {
+    var backBtn = document.getElementById('backButton');
+    if (!backBtn) return;
+    backBtn.addEventListener('click', function () {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = '{% url "dashboard:index" %}';
+      }
+    });
   })();
 </script>
 

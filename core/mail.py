@@ -17,12 +17,19 @@ def send_store_email(subject, body, to, attachments=None):
     if not store.smtp_host or not store.from_email:
         raise EmailNotConfigured("Email is not configured yet — set SMTP host and From address in Settings.")
 
+    port = store.smtp_port or 587
+    # Port 465 is implicit-SSL only (STARTTLS on it fails silently/hangs);
+    # 587 (and everything else) expects STARTTLS. There's no separate
+    # use_ssl field in Settings, so infer it from the port instead of
+    # forcing the user to know which knob to flip.
+    use_ssl = port == 465
     connection = get_connection(
         host=store.smtp_host,
-        port=store.smtp_port or 587,
+        port=port,
         username=store.smtp_username or None,
         password=store.smtp_password or None,
-        use_tls=store.smtp_use_tls,
+        use_tls=store.smtp_use_tls and not use_ssl,
+        use_ssl=use_ssl,
         # Without this, a bad host/port or a blocked outbound port hangs on the
         # OS-level TCP timeout (minutes) — long enough for gunicorn's own worker
         # timeout to kill the request first, turning a catchable SMTP error into

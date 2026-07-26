@@ -140,7 +140,7 @@ a { text-decoration: none; }
   background: linear-gradient(180deg, var(--sidebar-start), var(--sidebar-end));
   padding: 1.25rem 0.9rem;
   z-index: 1030;
-  transition: transform 0.25s ease;
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .sidebar .nav-link {
@@ -154,12 +154,13 @@ a { text-decoration: none; }
   font-weight: 500;
   transition: background 0.15s, color 0.15s, box-shadow 0.15s;
 }
-.sidebar .nav-link i { font-size: 1rem; width: 1.1rem; text-align: center; }
+.sidebar .nav-link i { font-size: 1rem; width: 1.1rem; text-align: center; transition: transform 0.15s ease; }
 
 .sidebar .nav-link:hover {
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
 }
+.sidebar .nav-link:hover i { transform: translateX(2px); }
 
 .sidebar .nav-link.active {
   background: linear-gradient(90deg, var(--brand-primary), var(--brand-accent));
@@ -187,9 +188,9 @@ a { text-decoration: none; }
   border-radius: 14px;
   background: var(--surface-card);
   box-shadow: 0 2px 10px rgba(20, 26, 48, 0.05);
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
-.card-stat:hover { box-shadow: 0 8px 22px rgba(20, 26, 48, 0.08); }
+.card-stat:hover { box-shadow: 0 8px 22px rgba(20, 26, 48, 0.08); transform: translateY(-2px); }
 .card-stat h3 { font-weight: 700; }
 
 .table thead {
@@ -202,7 +203,9 @@ a { text-decoration: none; }
 .table thead th { border-bottom: 2px solid var(--border-soft); font-weight: 700; }
 .table-hover tbody tr:hover { background-color: #f6f8ff; }
 
-.btn { border-radius: 8px; font-weight: 500; }
+.btn { border-radius: 8px; font-weight: 500; transition: all 0.2s ease; }
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0) scale(0.98); }
 .btn-primary {
   background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent));
   border: none;
@@ -374,6 +377,21 @@ a { text-decoration: none; }
   .auth-form-panel { flex: 1 1 100%; }
 }
 
+/* ---------- Animations ---------- */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .main-content { animation: fadeInUp 0.25s ease; }
+  .search-dropdown { animation: fadeSlideDown 0.15s ease; }
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 991.98px) {
   .sidebar {
@@ -390,6 +408,24 @@ a { text-decoration: none; }
 @media (max-width: 575.98px) {
   .brand-tagline { display: none; }
   .main-content { padding: 1.1rem; }
+
+  /* Page-header toolbars (title + action buttons) are a flex row with no
+     wrap by default, so on a narrow phone the buttons just shrink and their
+     own labels wrap into cramped multi-line boxes instead of the row
+     wrapping. Force the title onto its own line and let every button
+     group wrap normally. */
+  .d-flex.justify-content-between.align-items-center.mb-3 {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+  .d-flex.justify-content-between.align-items-center.mb-3 > h3,
+  .d-flex.justify-content-between.align-items-center.mb-3 > h5 {
+    flex: 1 1 100%;
+  }
+  .d-flex.gap-2 {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
 }
 
 /* ---------- Print ---------- */

@@ -142,8 +142,8 @@ def sale_email_invoice(request, pk):
         )
     except EmailNotConfigured as exc:
         messages.error(request, str(exc))
-    except Exception:
-        messages.error(request, 'Could not send the email — check the SMTP settings and try again.')
+    except Exception as exc:
+        messages.error(request, f'Could not send the email — {exc}')
     else:
         messages.success(request, f'Invoice emailed to {sale.customer.email}.')
     return redirect('sales:sale_detail', pk=pk)
