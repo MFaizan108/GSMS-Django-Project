@@ -5,6 +5,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}GSMS{% endblock %} | {{ store_settings.store_name|default:"General Store" }}</title>
+<script>
+  // Set the theme before first paint so the page never flashes light-then-dark.
+  (function () {
+    try {
+      var saved = localStorage.getItem('gsms-theme');
+      if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        // Bootstrap 5.3 ships its own complete dark palette behind this
+        // attribute — every one of its utility classes (.text-muted,
+        // .text-secondary, .border, etc.) and untouched components read
+        // color from Bootstrap's own --bs-* variables, not ours, so
+        // without this they stay at their light-mode values (dark-gray
+        // text on our now-dark backgrounds — unreadable).
+        document.documentElement.setAttribute('data-bs-theme', 'dark');
+      }
+    } catch (e) {}
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -30,6 +48,9 @@
     <button class="sidebar-toggle d-lg-none" id="sidebarToggle" type="button" aria-label="Toggle menu">
       <i class="bi bi-list"></i>
     </button>
+    <button class="sidebar-toggle d-none d-lg-inline-flex" id="sidebarCollapseToggle" type="button" aria-label="Collapse sidebar">
+      <i class="bi bi-layout-sidebar-inset"></i>
+    </button>
     <a href="{{ url_dashboard }}" class="brand">
       {% if store_settings.logo %}
         <img src="{{ store_settings.logo.url }}" alt="{{ store_settings.store_name }}" class="brand-logo">
@@ -43,6 +64,11 @@
     </a>
   </div>
   <div class="topbar-right">
+    <button type="button" class="topbar-action theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+      <i class="bi bi-moon-stars theme-icon-dark"></i>
+      <i class="bi bi-sun theme-icon-light"></i>
+      <span class="d-none d-md-inline">Theme</span>
+    </button>
     <a href="{% url 'notifications:notification_list' %}" class="topbar-action position-relative">
       <i class="bi bi-bell"></i><span class="d-none d-md-inline">Alerts</span>
       {% if unread_notifications_count %}
@@ -76,19 +102,22 @@
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
   <nav class="sidebar" id="sidebar">
     <ul class="nav flex-column gap-1">
-      <li class="nav-item"><a class="nav-link{% if request.path == url_dashboard %} active{% endif %}" href="{{ url_dashboard }}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_sales %} active{% endif %}" href="{{ url_sales }}"><i class="bi bi-cart-check"></i> Sales</a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_dashboard %} active{% endif %}" href="{{ url_dashboard }}" title="Dashboard"><i class="bi bi-speedometer2"></i><span class="nav-label"> Dashboard</span></a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_sales %} active{% endif %}" href="{{ url_sales }}" title="Sales"><i class="bi bi-cart-check"></i><span class="nav-label"> Sales</span></a></li>
       {% if user.is_manager %}
       {% url 'purchases:purchase_list' as url_purchases %}
       {% url 'purchases:purchase_order_list' as url_purchase_orders %}
-      <li class="nav-item"><a class="nav-link{% if request.path == url_purchases %} active{% endif %}" href="{{ url_purchases }}"><i class="bi bi-cart-plus"></i> Purchases</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_purchase_orders %} active{% endif %}" href="{{ url_purchase_orders }}"><i class="bi bi-file-earmark-text"></i> Purchase Orders</a></li>
+      <li class="nav-section-label">Purchasing</li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_purchases %} active{% endif %}" href="{{ url_purchases }}" title="Purchases"><i class="bi bi-cart-plus"></i><span class="nav-label"> Purchases</span></a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_purchase_orders %} active{% endif %}" href="{{ url_purchase_orders }}" title="Purchase Orders"><i class="bi bi-file-earmark-text"></i><span class="nav-label"> Purchase Orders</span></a></li>
       {% endif %}
-      <li class="nav-item"><a class="nav-link{% if request.path == url_products %} active{% endif %}" href="{{ url_products }}"><i class="bi bi-box-seam"></i> Products</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_categories %} active{% endif %}" href="{{ url_categories }}"><i class="bi bi-tags"></i> Categories</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_brands %} active{% endif %}" href="{{ url_brands }}"><i class="bi bi-bookmark"></i> Brands</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_units %} active{% endif %}" href="{{ url_units }}"><i class="bi bi-rulers"></i> Units of Measure</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_inventory %} active{% endif %}" href="{{ url_inventory }}"><i class="bi bi-boxes"></i> Stock Adjustment</a></li>
+      <li class="nav-section-label">Catalog</li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_products %} active{% endif %}" href="{{ url_products }}" title="Products"><i class="bi bi-box-seam"></i><span class="nav-label"> Products</span></a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_categories %} active{% endif %}" href="{{ url_categories }}" title="Categories"><i class="bi bi-tags"></i><span class="nav-label"> Categories</span></a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_brands %} active{% endif %}" href="{{ url_brands }}" title="Brands"><i class="bi bi-bookmark"></i><span class="nav-label"> Brands</span></a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_units %} active{% endif %}" href="{{ url_units }}" title="Units of Measure"><i class="bi bi-rulers"></i><span class="nav-label"> Units of Measure</span></a></li>
+      <li class="nav-section-label">Inventory</li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_inventory %} active{% endif %}" href="{{ url_inventory }}" title="Stock Adjustment"><i class="bi bi-boxes"></i><span class="nav-label"> Stock Adjustment</span></a></li>
       {% if user.is_manager %}
       {% url 'customers:customer_list' as url_customers %}
       {% url 'suppliers:supplier_list' as url_suppliers %}
@@ -97,18 +126,22 @@
       {% url 'finance:income_list' as url_income %}
       {% url 'finance:day_closing_list' as url_day_closing %}
       {% url 'finance:cash_register_list' as url_cash_registers %}
-      <li class="nav-item"><a class="nav-link{% if request.path == url_customers %} active{% endif %}" href="{{ url_customers }}"><i class="bi bi-people"></i> Customers</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_suppliers %} active{% endif %}" href="{{ url_suppliers }}"><i class="bi bi-truck"></i> Suppliers</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_udhaar %} active{% endif %}" href="{{ url_udhaar }}"><i class="bi bi-journal-text"></i> Accounts Ledger</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_expenses %} active{% endif %}" href="{{ url_expenses }}"><i class="bi bi-cash-coin"></i> Expenses</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_income %} active{% endif %}" href="{{ url_income }}"><i class="bi bi-graph-up-arrow"></i> Other Income</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_day_closing %} active{% endif %}" href="{{ url_day_closing }}"><i class="bi bi-calculator"></i> Day Closing</a></li>
-      <li class="nav-item"><a class="nav-link{% if request.path == url_cash_registers %} active{% endif %}" href="{{ url_cash_registers }}"><i class="bi bi-cash-stack"></i> Cash Registers</a></li>
+      <li class="nav-section-label">People</li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_customers %} active{% endif %}" href="{{ url_customers }}" title="Customers"><i class="bi bi-people"></i><span class="nav-label"> Customers</span></a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_suppliers %} active{% endif %}" href="{{ url_suppliers }}" title="Suppliers"><i class="bi bi-truck"></i><span class="nav-label"> Suppliers</span></a></li>
+      <li class="nav-section-label">Finance</li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_udhaar %} active{% endif %}" href="{{ url_udhaar }}" title="Accounts Ledger"><i class="bi bi-journal-text"></i><span class="nav-label"> Accounts Ledger</span></a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_expenses %} active{% endif %}" href="{{ url_expenses }}" title="Expenses"><i class="bi bi-cash-coin"></i><span class="nav-label"> Expenses</span></a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_income %} active{% endif %}" href="{{ url_income }}" title="Other Income"><i class="bi bi-graph-up-arrow"></i><span class="nav-label"> Other Income</span></a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_day_closing %} active{% endif %}" href="{{ url_day_closing }}" title="Day Closing"><i class="bi bi-calculator"></i><span class="nav-label"> Day Closing</span></a></li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_cash_registers %} active{% endif %}" href="{{ url_cash_registers }}" title="Cash Registers"><i class="bi bi-cash-stack"></i><span class="nav-label"> Cash Registers</span></a></li>
       {% endif %}
-      <li class="nav-item"><a class="nav-link{% if request.path == url_reports %} active{% endif %}" href="{{ url_reports }}"><i class="bi bi-bar-chart"></i> Reports</a></li>
+      <li class="nav-section-label">Reports</li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_reports %} active{% endif %}" href="{{ url_reports }}" title="Reports"><i class="bi bi-bar-chart"></i><span class="nav-label"> Reports</span></a></li>
       {% if user.is_admin %}
       {% url 'accounts:user_list' as url_users %}
-      <li class="nav-item"><a class="nav-link{% if request.path == url_users %} active{% endif %}" href="{{ url_users }}"><i class="bi bi-person-badge"></i> Users</a></li>
+      <li class="nav-section-label">Administration</li>
+      <li class="nav-item"><a class="nav-link{% if request.path == url_users %} active{% endif %}" href="{{ url_users }}" title="Users"><i class="bi bi-person-badge"></i><span class="nav-label"> Users</span></a></li>
       {% endif %}
     </ul>
   </nav>
@@ -137,6 +170,32 @@
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
   (function () {
+    // Runs on every page, so any password field anywhere (new-user
+    // creation, SMTP password in Settings, future ones too) gets a
+    // show/hide eye icon automatically — no per-form wiring needed.
+    // Skips the login page's password field, which already builds its own
+    // toggle inside a two-icon (lock + eye) .input-icon-group layout.
+    document.querySelectorAll('input[type="password"]').forEach(function (input) {
+      if (input.closest('.input-icon-group')) return;
+      var wrapper = document.createElement('div');
+      wrapper.className = 'password-toggle-wrap';
+      input.parentNode.insertBefore(wrapper, input);
+      wrapper.appendChild(input);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'input-icon-toggle';
+      btn.tabIndex = -1;
+      btn.setAttribute('aria-label', 'Show password');
+      btn.innerHTML = '<i class="bi bi-eye"></i>';
+      wrapper.appendChild(btn);
+      btn.addEventListener('click', function () {
+        var isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+        btn.querySelector('i').className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
+      });
+    });
+  })();
+  (function () {
     var toggle = document.getElementById('sidebarToggle');
     var sidebar = document.getElementById('sidebar');
     var backdrop = document.getElementById('sidebarBackdrop');
@@ -152,6 +211,18 @@
     backdrop.addEventListener('click', closeSidebar);
   })();
   (function () {
+    var collapseToggle = document.getElementById('sidebarCollapseToggle');
+    var sidebarEl = document.getElementById('sidebar');
+    if (!collapseToggle || !sidebarEl) return;
+    if (localStorage.getItem('gsms-sidebar-collapsed') === '1') {
+      sidebarEl.classList.add('collapsed');
+    }
+    collapseToggle.addEventListener('click', function () {
+      var collapsed = sidebarEl.classList.toggle('collapsed');
+      localStorage.setItem('gsms-sidebar-collapsed', collapsed ? '1' : '0');
+    });
+  })();
+  (function () {
     var backBtn = document.getElementById('backButton');
     if (!backBtn) return;
     backBtn.addEventListener('click', function () {
@@ -160,6 +231,39 @@
       } else {
         window.location.href = '{% url "dashboard:index" %}';
       }
+    });
+  })();
+  (function () {
+    var themeToggle = document.getElementById('themeToggle');
+    if (!themeToggle) return;
+    themeToggle.addEventListener('click', function () {
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      if (isDark) {
+        document.documentElement.removeAttribute('data-theme');
+        document.documentElement.removeAttribute('data-bs-theme');
+        localStorage.setItem('gsms-theme', 'light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.setAttribute('data-bs-theme', 'dark');
+        localStorage.setItem('gsms-theme', 'dark');
+      }
+    });
+  })();
+  (function () {
+    // Attached at the document level so it only runs on bubble, after any
+    // page-specific submit handler (e.g. the Sales/Purchases bill builders'
+    // "cart is empty" check) has already had a chance to call
+    // preventDefault() — this only fires for submits that actually go
+    // through, so a slow request or an impatient double-click can't fire
+    // the same Sale/Purchase/Payment twice.
+    document.addEventListener('submit', function (e) {
+      if (e.defaultPrevented) return;
+      var btn = e.target.querySelector('button[type="submit"]');
+      if (!btn || btn.classList.contains('is-loading')) return;
+      btn.dataset.originalHtml = btn.innerHTML;
+      btn.classList.add('is-loading');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>' + btn.innerHTML;
     });
   })();
 </script>

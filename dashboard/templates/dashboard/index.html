@@ -245,6 +245,15 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
+  // Chart.js draws to <canvas>, so it can't pick up CSS variables — without
+  // this, axis/legend text defaults to black and is unreadable once the
+  // dashboard's cards go dark.
+  const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+  const chartTextColor = isDarkTheme ? '#9aa3bd' : '#7a869a';
+  const chartGridColor = isDarkTheme ? 'rgba(255,255,255,0.08)' : 'rgba(20,26,48,0.07)';
+  Chart.defaults.color = chartTextColor;
+  Chart.defaults.borderColor = chartGridColor;
+
   const trendLabels = JSON.parse(document.getElementById('trend-labels').textContent);
   const trendSales = JSON.parse(document.getElementById('trend-sales').textContent);
   const trendPurchases = JSON.parse(document.getElementById('trend-purchases').textContent);
@@ -257,7 +266,7 @@
         { label: 'Purchases', data: trendPurchases, borderColor: '#fd7e14', backgroundColor: 'rgba(253,126,20,0.1)', tension: 0.3 },
       ],
     },
-    options: { responsive: true, scales: { y: { beginAtZero: true } } },
+    options: { responsive: true, scales: { y: { beginAtZero: true, grid: { color: chartGridColor } }, x: { grid: { color: chartGridColor } } } },
   });
 
   const topProductsLabels = JSON.parse(document.getElementById('top-products-labels').textContent);

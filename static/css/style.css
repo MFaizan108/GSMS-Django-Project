@@ -12,6 +12,47 @@
   --topbar-height: 64px;
   --sidebar-width: 250px;
   --radius: 12px;
+
+  /* Pulled out of individual rules so dark mode (below) can reach them too. */
+  --topbar-bg: #ffffff;
+  --table-head-bg: #eef1f7;
+  --table-hover-bg: #f6f8ff;
+  --input-bg: #ffffff;
+  --input-border: #d8dde8;
+  --modal-bg: #ffffff;
+  --shadow-soft: rgba(20, 26, 48, 0.05);
+  --shadow-medium: rgba(20, 26, 48, 0.08);
+  --scrollbar-thumb: rgba(20, 26, 48, 0.18);
+  --scrollbar-thumb-hover: rgba(20, 26, 48, 0.32);
+  --scrollbar-track: transparent;
+}
+
+/* ---------- Dark theme ----------
+   Toggled by setting data-theme="dark" on <html> (see base.html — an
+   inline head script sets this before first paint to avoid a flash, and
+   a topbar button flips it + persists the choice to localStorage).
+   Because almost every rule below reads color from a variable rather
+   than a literal, this one override block is what turns the whole app
+   dark — sidebar, cards, tables, dropdowns, the barcode-scanner modal,
+   even the login screen. */
+:root[data-theme="dark"] {
+  --sidebar-start: #0d1224;
+  --sidebar-end: #060814;
+  --surface: #10131f;
+  --surface-card: #1a1f30;
+  --text-dark: #e9ecf7;
+  --text-muted: #9aa3bd;
+  --border-soft: rgba(255, 255, 255, 0.08);
+  --topbar-bg: #151a2a;
+  --table-head-bg: #202537;
+  --table-hover-bg: #202537;
+  --input-bg: #10131f;
+  --input-border: rgba(255, 255, 255, 0.14);
+  --modal-bg: #1a1f30;
+  --shadow-soft: rgba(0, 0, 0, 0.25);
+  --shadow-medium: rgba(0, 0, 0, 0.4);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.16);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.28);
 }
 
 * { box-sizing: border-box; }
@@ -20,6 +61,7 @@ html, body {
   background-color: var(--surface);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: var(--text-dark);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 h1, h2, h3, h4, h5, h6 { font-weight: 700; color: var(--text-dark); }
@@ -35,10 +77,11 @@ a { text-decoration: none; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #ffffff;
+  background: var(--topbar-bg);
   border-bottom: 1px solid var(--border-soft);
   padding: 0 1.5rem;
-  box-shadow: 0 2px 10px rgba(20, 26, 48, 0.04);
+  box-shadow: 0 2px 10px var(--shadow-soft);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .topbar-left { display: flex; align-items: center; gap: 0.9rem; }
@@ -91,6 +134,11 @@ a { text-decoration: none; }
 }
 .topbar-action:hover { background: var(--surface); color: var(--text-dark); }
 .topbar-action i { font-size: 1rem; }
+
+.theme-toggle { border: none; cursor: pointer; }
+.theme-icon-light { display: none; }
+:root[data-theme="dark"] .theme-icon-dark { display: none; }
+:root[data-theme="dark"] .theme-icon-light { display: inline-block; }
 
 .topbar-divider {
   width: 1px;
@@ -168,6 +216,31 @@ a { text-decoration: none; }
   box-shadow: 0 4px 12px rgba(79, 109, 245, 0.35);
 }
 
+/* Small uppercase group headers between sidebar sections (Purchasing,
+   Catalog, Inventory, People, Finance, Reports, Administration) — purely
+   visual grouping, not a link. */
+.nav-section-label {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.9rem 0.85rem 0.3rem;
+}
+
+/* Icon-only collapsed mode (desktop only — the sidebar-toggle button that
+   drives this is hidden below the lg breakpoint, where the sidebar is
+   already an overlay drawer instead of a fixed column). Persisted via
+   localStorage the same way the theme choice is. */
+@media (min-width: 992px) {
+  .sidebar.collapsed { width: 72px; }
+  .sidebar.collapsed .nav-label,
+  .sidebar.collapsed .nav-section-label,
+  .sidebar.collapsed .brand-text { display: none; }
+  .sidebar.collapsed .nav-link { justify-content: center; padding: 0.62rem; }
+  .sidebar.collapsed .nav-link i { width: auto; }
+}
+
 .sidebar-backdrop {
   display: none;
   position: fixed;
@@ -193,15 +266,33 @@ a { text-decoration: none; }
 .card-stat:hover { box-shadow: 0 8px 22px rgba(20, 26, 48, 0.08); transform: translateY(-2px); }
 .card-stat h3 { font-weight: 700; }
 
+/* Bootstrap paints every cell's background from its own --bs-table-bg
+   variable (defaulting to white), completely separate from our --surface
+   variables — setting only `color` here (as a previous version of this
+   rule did) left dark-mode text light-on-white-cells, i.e. invisible.
+   Overriding Bootstrap's own variables at the .table level is what
+   actually reaches every cell, since that's what its internal per-cell
+   background rule reads. */
+.table {
+  --bs-table-bg: var(--surface-card);
+  --bs-table-color: var(--text-dark);
+  --bs-table-border-color: var(--border-soft);
+  color: var(--text-dark);
+  border-color: var(--border-soft);
+}
 .table thead {
-  background-color: #eef1f7;
+  --bs-table-bg: var(--table-head-bg);
+  background-color: var(--table-head-bg);
   color: var(--text-muted);
   text-transform: uppercase;
   font-size: 0.72rem;
   letter-spacing: 0.04em;
 }
 .table thead th { border-bottom: 2px solid var(--border-soft); font-weight: 700; }
-.table-hover tbody tr:hover { background-color: #f6f8ff; }
+.table-hover > tbody > tr:hover > * {
+  --bs-table-bg: var(--table-hover-bg);
+  background-color: var(--table-hover-bg);
+}
 
 .btn { border-radius: 8px; font-weight: 500; transition: all 0.2s ease; }
 .btn:hover { transform: translateY(-1px); }
@@ -215,6 +306,109 @@ a { text-decoration: none; }
   background: linear-gradient(135deg, var(--brand-primary-dark), var(--brand-accent));
   box-shadow: 0 4px 14px rgba(79, 109, 245, 0.38);
 }
+
+/* ---------- Forms ---------- */
+/* Bare Bootstrap form controls default to a plain white box, which looks
+   wrong once the surrounding page can go dark — theme them explicitly. */
+.form-control, .form-select {
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-dark);
+  transition: background-color 0.2s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.2s ease;
+}
+.form-control:focus, .form-select:focus {
+  background-color: var(--input-bg);
+  border-color: var(--brand-primary);
+  color: var(--text-dark);
+  box-shadow: 0 0 0 0.2rem rgba(79, 109, 245, 0.2);
+}
+.form-control::placeholder { color: var(--text-muted); opacity: 1; }
+.form-control:disabled, .form-select:disabled {
+  background-color: var(--surface);
+  opacity: 0.65;
+}
+.form-check-input {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+}
+.form-check-input:checked {
+  background-color: var(--brand-primary);
+  border-color: var(--brand-primary);
+}
+.form-label { color: var(--text-dark); }
+.invalid-feedback { font-size: 0.8rem; }
+
+/* ---------- Accessibility: keyboard focus ---------- */
+/* Only shows for keyboard navigation (:focus-visible), not mouse clicks,
+   so it doesn't add a ring around every button after a click. */
+a:focus-visible, button:focus-visible, .btn:focus-visible,
+.form-control:focus-visible, .form-select:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+/* ---------- Scrollbars (WebKit/Blink) ---------- */
+.sidebar::-webkit-scrollbar, .search-dropdown::-webkit-scrollbar, .table-responsive::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.sidebar::-webkit-scrollbar-track, .search-dropdown::-webkit-scrollbar-track, .table-responsive::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+.sidebar::-webkit-scrollbar-thumb, .search-dropdown::-webkit-scrollbar-thumb, .table-responsive::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 8px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover, .search-dropdown::-webkit-scrollbar-thumb:hover, .table-responsive::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+/* ---------- Alerts ---------- */
+/* Bootstrap's default alert palette assumes a light page — re-tint so
+   they stay readable once the surrounding card/background goes dark. */
+.alert {
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+}
+:root[data-theme="dark"] .alert-success { background-color: rgba(25, 135, 84, 0.18); color: #6fe3a5; }
+:root[data-theme="dark"] .alert-danger { background-color: rgba(220, 53, 69, 0.18); color: #ff8f9a; }
+:root[data-theme="dark"] .alert-warning { background-color: rgba(255, 193, 7, 0.18); color: #ffd863; }
+:root[data-theme="dark"] .alert-info { background-color: rgba(13, 202, 240, 0.18); color: #7fe3f7; }
+
+/* ---------- Badges ---------- */
+.badge { font-weight: 600; letter-spacing: 0.02em; padding: 0.4em 0.65em; }
+/* Bootstrap's neutral "light" badge (used for the Ledger's transaction-kind
+   tag) is a near-white chip — on a dark card that reads as a jarring bright
+   patch rather than a neutral one, so re-tint it to the theme's own
+   neutral surface instead. */
+:root[data-theme="dark"] .badge.bg-light { background-color: var(--surface) !important; color: var(--text-dark) !important; border-color: var(--border-soft) !important; }
+
+/* ---------- List groups (dashboard's low-stock/expiry widgets) ---------- */
+.list-group-item {
+  background-color: var(--surface-card);
+  color: var(--text-dark);
+  border-color: var(--border-soft);
+}
+
+/* ---------- Dropdown menus (Bootstrap) ---------- */
+.dropdown-menu {
+  background-color: var(--surface-card);
+  border-color: var(--border-soft);
+  box-shadow: 0 10px 26px var(--shadow-medium);
+}
+.dropdown-item { color: var(--text-dark); }
+.dropdown-item:hover, .dropdown-item:focus { background-color: var(--surface); color: var(--text-dark); }
+.dropdown-divider { border-color: var(--border-soft); }
+
+/* ---------- Modals (e.g. the barcode scanner) ---------- */
+.modal-content {
+  background-color: var(--modal-bg);
+  color: var(--text-dark);
+  border: 1px solid var(--border-soft);
+}
+.modal-header, .modal-footer { border-color: var(--border-soft); }
+:root[data-theme="dark"] .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
 
 /* ---------- POS: search dropdowns / bill table ---------- */
 .search-dropdown {
@@ -361,6 +555,12 @@ a { text-decoration: none; }
   pointer-events: none;
 }
 .input-icon-group .form-control { padding-left: 2.4rem; }
+
+/* Generic password show/hide wrapper — injected by base.html's global
+   script around every bare <input type="password"> site-wide, reusing
+   the same .input-icon-toggle button style as the login page's. */
+.password-toggle-wrap { position: relative; }
+.password-toggle-wrap .form-control { padding-right: 2.4rem; }
 .input-icon-toggle {
   position: absolute;
   right: 0.5rem;
@@ -377,6 +577,62 @@ a { text-decoration: none; }
   .auth-form-panel { flex: 1 1 100%; }
 }
 
+/* ---------- Barcode label sheet (products:barcode_label) ---------- */
+.label-sheet {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.label-card {
+  width: 190px;
+  padding: 0.5rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  background: var(--surface-card);
+  text-align: center;
+  break-inside: avoid;
+}
+.label-card-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.label-card-barcode { max-width: 100%; height: auto; margin: 0.2rem 0; }
+.label-card-code { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.03em; }
+.label-card-price { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); }
+
+@media print {
+  /* Labels print edge-to-edge with no gap so a sheet of pre-cut label
+     stock lines up — the on-screen preview keeps the gap for readability. */
+  .label-sheet { gap: 0; }
+  .label-card { border: 1px dashed #999; border-radius: 0; }
+}
+
+/* ---------- Misc components ---------- */
+::selection { background: rgba(79, 109, 245, 0.25); color: var(--text-dark); }
+
+hr { border-color: var(--border-soft); opacity: 1; }
+
+.spinner-border, .spinner-grow { color: var(--brand-primary); }
+
+/* Used by the global submit-button "loading" state — see base.html, which
+   disables the button and swaps its label for a spinner on every form
+   submit, so a slow request (or an impatient double-click) can't fire the
+   same Sale/Purchase/Payment twice. */
+.btn.is-loading { pointer-events: none; opacity: 0.85; }
+.btn.is-loading .spinner-border { width: 0.9rem; height: 0.9rem; border-width: 0.15em; vertical-align: -0.15em; margin-right: 0.4rem; }
+
+.table-sm td, .table-sm th { padding: 0.5rem 0.65rem; }
+
+/* Centered icon + message used for "no rows yet" states across list/detail
+   tables (there are 50+ of these {% empty %} blocks app-wide). */
+.empty-state { padding: 2.5rem 1rem; text-align: center; color: var(--text-muted); }
+.empty-state i { font-size: 2rem; display: block; margin-bottom: 0.5rem; opacity: 0.5; }
+.empty-state p { margin: 0; font-size: 0.9rem; }
+
 /* ---------- Animations ---------- */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(8px); }
@@ -392,7 +648,12 @@ a { text-decoration: none; }
   .search-dropdown { animation: fadeSlideDown 0.15s ease; }
 }
 
-/* ---------- Responsive ---------- */
+/* ---------- Responsive ----------
+   Three tiers: tablet (<=991.98px, matches Bootstrap's lg breakpoint —
+   this is also where the sidebar switches from sticky-column to an
+   overlay drawer), small tablet / large phone (<=767.98px), and phone
+   (<=575.98px). Each tier only overrides what actually needs to change
+   at that width rather than repeating the whole ruleset. */
 @media (max-width: 991.98px) {
   .sidebar {
     position: fixed;
@@ -403,11 +664,23 @@ a { text-decoration: none; }
   }
   .sidebar.show { transform: translateX(0); box-shadow: 4px 0 20px rgba(0, 0, 0, 0.25); }
   .sidebar-backdrop.show { display: block; }
+  .main-content { padding: 1.4rem; }
+  .card-stat { border-radius: 12px; }
+}
+
+@media (max-width: 767.98px) {
+  .topbar { padding: 0 1rem; }
+  .topbar-right { gap: 0.15rem; }
+  .user-info { display: none; }
+  .topbar-divider { display: none; }
+  .card-stat.p-4 { padding: 1.1rem !important; }
+  .table { font-size: 0.9rem; }
 }
 
 @media (max-width: 575.98px) {
   .brand-tagline { display: none; }
   .main-content { padding: 1.1rem; }
+  .auth-form-card { padding: 1.5rem 1.25rem; }
 
   /* Page-header toolbars (title + action buttons) are a flex row with no
      wrap by default, so on a narrow phone the buttons just shrink and their
@@ -426,13 +699,39 @@ a { text-decoration: none; }
     flex-wrap: wrap;
     row-gap: 0.5rem;
   }
+
+  /* Buttons already shrink to fit their flex row (see above); on a phone
+     that's tight enough that the default padding makes them feel oversized
+     next to their now-wrapped, narrower neighbors. */
+  .btn-sm { padding: 0.3rem 0.6rem; font-size: 0.8rem; }
+  .card-stat { padding: 1rem !important; }
+  h3 { font-size: 1.35rem; }
+  .change-box { font-size: 0.85rem; }
 }
 
 /* ---------- Print ---------- */
 @media print {
+  /* A printed invoice should always be plain black-on-white, regardless of
+     whether the person printing it has dark mode on — force the light
+     variable values here rather than relying on data-theme being absent. */
+  :root, :root[data-theme="dark"] {
+    --surface: #ffffff;
+    --surface-card: #ffffff;
+    --text-dark: #000000;
+    --text-muted: #444444;
+    --border-soft: rgba(0, 0, 0, 0.15);
+  }
   .topbar, .sidebar, .sidebar-backdrop, .no-print, .alert { display: none !important; }
   .app-body { display: block !important; }
-  .main-content { padding: 0 !important; }
-  body { background: #fff !important; }
-  .card-stat { box-shadow: none !important; border: none !important; }
+  .main-content { padding: 0 !important; animation: none !important; }
+  body { background: #fff !important; font-size: 12px; }
+  .card-stat { box-shadow: none !important; border: 1px solid #ddd !important; transform: none !important; }
+  .btn, button { display: none !important; }
+  a { color: #000 !important; text-decoration: none !important; }
+  .table { border-collapse: collapse !important; }
+  .table th, .table td { border: 1px solid #ccc !important; }
+  /* Keep a card's heading with at least its first row of content rather
+     than letting the printer split them across a page boundary. */
+  .card-stat { break-inside: avoid-page; }
+  h3, h4, h5, h6 { break-after: avoid-page; }
 }

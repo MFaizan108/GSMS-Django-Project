@@ -38,7 +38,7 @@
     {% else %}<span class="badge bg-secondary">Pending</span>{% endif %}
   </td>
 </tr>
-{% empty %}<tr><td colspan="8" class="text-center text-muted">No sales yet.</td></tr>{% endfor %}
+{% empty %}<tr><td colspan="8"><div class="empty-state"><i class="bi bi-cart-x"></i><p>No sales yet.</p></div></td></tr>{% endfor %}
 </tbody>
 </table>
 </div>

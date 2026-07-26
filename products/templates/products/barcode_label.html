@@ -14,20 +14,14 @@
   </div>
 </div>
 
-<div class="label-sheet d-flex flex-wrap gap-2">
+<div class="label-sheet">
   {% for _ in copies %}
-  <div class="label-card text-center p-2 border">
-    <div class="small fw-semibold text-truncate" style="max-width:200px;">{{ product.name }}</div>
-    <img src="{{ barcode_image }}" alt="{{ product.barcode }}" style="max-width:200px;">
-    <div class="small">{{ product.barcode }}</div>
-    <div class="fw-bold">{{ product.retail_price }}</div>
+  <div class="label-card">
+    <div class="label-card-name">{{ product.name }}</div>
+    <img src="{{ barcode_image }}" alt="{{ product.barcode }}" class="label-card-barcode">
+    <div class="label-card-code">{{ product.barcode }}</div>
+    <div class="label-card-price">{{ product.retail_price }}</div>
   </div>
   {% endfor %}
 </div>
-
-<style>
-@media print {
-  .label-card { break-inside: avoid; }
-}
-</style>
 {% endblock %}
