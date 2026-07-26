@@ -3,13 +3,16 @@ from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.db.models import Q
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from accounts.decorators import manager_required
 from finance import services as finance_services
 from finance.forms import PaymentEntryForm
 from finance.models import Payment
+from products.models import Product
+from inventory.models import WarehouseStock
 from .models import Purchase, PurchaseReturn, PurchaseOrder, PurchaseOrderItem
 from .forms import (
     PurchaseForm, PurchaseItemFormSet, PurchaseReturnForm, PurchaseReturnItemFormSet,
@@ -67,6 +70,36 @@ def purchase_invoice_pdf(request, pk):
     return response
 
 
+@login_required
+@require_GET
+def purchase_product_search_api(request):
+    q = request.GET.get('q', '').strip()
+    warehouse_id = request.GET.get('warehouse_id')
+    products = Product.objects.filter(status=Product.Status.ACTIVE).select_related('unit')
+    if q:
+        products = products.filter(
+            Q(name__icontains=q) | Q(barcode__icontains=q) | Q(sku__icontains=q) | Q(barcodes__barcode__icontains=q)
+        ).distinct()
+    products = products.order_by('name')[:15]
+
+    stock_by_product = None
+    if warehouse_id and warehouse_id.isdigit():
+        stock_by_product = {
+            row['product_id']: row['quantity']
+            for row in WarehouseStock.objects.filter(warehouse_id=warehouse_id, product__in=products).values('product_id', 'quantity')
+        }
+
+    results = [{
+        'id': p.id,
+        'name': p.name,
+        'barcode': p.barcode or '',
+        'price': str(p.purchase_price),
+        'stock': str(stock_by_product.get(p.id, Decimal('0'))) if stock_by_product is not None else str(p.stock),
+        'unit': (p.unit.short_name or p.unit.name) if p.unit else '',
+    } for p in products]
+    return JsonResponse({'results': results})
+
+
 @manager_required
 def purchase_create(request):
     from_po = None
@@ -106,19 +139,61 @@ def purchase_create(request):
             'supplier': from_po.supplier_id, 'warehouse': from_po.warehouse_id,
             'invoice_no': next_invoice, 'date': timezone.localdate(),
         }, user=request.user)
-        pending_items = [i for i in from_po.items.all() if i.pending_quantity > 0]
-        formset = PurchaseItemFormSet(
-            instance=Purchase(),
-            initial=[{
-                'product': i.product_id, 'quantity': i.pending_quantity, 'purchase_price': i.expected_price,
-                'purchase_order_item_id': i.pk,
-            } for i in pending_items],
-        )
-        formset.extra = max(len(pending_items), 1)
+        formset = PurchaseItemFormSet(instance=Purchase())
     else:
         form = PurchaseForm(user=request.user)
         formset = PurchaseItemFormSet(instance=Purchase())
-    return render(request, 'purchases/purchase_form.html', {'form': form, 'formset': formset, 'from_po': from_po})
+
+    # Rebuild the bill-builder's cart from bound/from-PO data so a validation
+    # error (or the from_po prefill) survives the redisplay — same pattern as
+    # sales.views.sale_create's prefill_items.
+    warehouse_id = form['warehouse'].value()
+    stock_by_product = {}
+    if warehouse_id:
+        stock_by_product = {
+            row['product_id']: row['quantity']
+            for row in WarehouseStock.objects.filter(warehouse_id=warehouse_id).values('product_id', 'quantity')
+        }
+
+    prefill_items = []
+    if request.method == 'POST':
+        for f in formset.forms:
+            product_id = f['product'].value()
+            if not product_id or f['DELETE'].value():
+                continue
+            try:
+                product = Product.objects.select_related('unit').get(pk=product_id)
+            except (Product.DoesNotExist, ValueError, TypeError):
+                continue
+            prefill_items.append({
+                'product_id': product.id,
+                'name': product.name,
+                'unit': (product.unit.short_name or product.unit.name) if product.unit else '',
+                'price': str(f['purchase_price'].value() or product.purchase_price),
+                'qty': str(f['quantity'].value() or '1'),
+                'stock': str(stock_by_product.get(product.id, Decimal('0'))),
+                'expiry_date': f['expiry_date'].value() or '',
+                'batch_number': f['batch_number'].value() or '',
+                'purchase_order_item_id': f['purchase_order_item_id'].value() or '',
+            })
+    elif from_po:
+        for i in from_po.items.all():
+            if i.pending_quantity <= 0:
+                continue
+            prefill_items.append({
+                'product_id': i.product_id,
+                'name': str(i.product),
+                'unit': (i.product.unit.short_name or i.product.unit.name) if i.product.unit else '',
+                'price': str(i.expected_price),
+                'qty': str(i.pending_quantity),
+                'stock': str(stock_by_product.get(i.product_id, Decimal('0'))),
+                'expiry_date': '',
+                'batch_number': '',
+                'purchase_order_item_id': i.pk,
+            })
+
+    context = {'form': form, 'formset': formset, 'from_po': from_po, 'prefill_items': prefill_items}
+    return render(request, 'purchases/purchase_form.html', context)
 
 
 @manager_required
@@ -194,7 +269,27 @@ def purchase_order_create(request):
         next_order_no = f"PO-{PurchaseOrder.objects.count() + 1:05d}"
         form = PurchaseOrderForm(initial={'date': timezone.localdate(), 'order_no': next_order_no}, user=request.user)
         formset = PurchaseOrderItemFormSet(instance=PurchaseOrder())
-    return render(request, 'purchases/purchase_order_form.html', {'form': form, 'formset': formset})
+
+    prefill_items = []
+    if request.method == 'POST':
+        for f in formset.forms:
+            product_id = f['product'].value()
+            if not product_id or f['DELETE'].value():
+                continue
+            try:
+                product = Product.objects.select_related('unit').get(pk=product_id)
+            except (Product.DoesNotExist, ValueError, TypeError):
+                continue
+            prefill_items.append({
+                'product_id': product.id,
+                'name': product.name,
+                'unit': (product.unit.short_name or product.unit.name) if product.unit else '',
+                'price': str(f['expected_price'].value() or product.purchase_price),
+                'qty': str(f['quantity'].value() or '1'),
+            })
+
+    context = {'form': form, 'formset': formset, 'prefill_items': prefill_items}
+    return render(request, 'purchases/purchase_order_form.html', context)
 
 
 @manager_required

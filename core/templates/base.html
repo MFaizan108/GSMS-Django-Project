@@ -133,6 +133,7 @@
   {% block content_noauth %}{% endblock %}
 {% endif %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
   (function () {
     var toggle = document.getElementById('sidebarToggle');
@@ -150,6 +151,67 @@
     backdrop.addEventListener('click', closeSidebar);
   })();
 </script>
+
+{% if user.is_authenticated %}
+<div class="modal fade" id="barcodeScannerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="bi bi-upc-scan"></i> Barcode Scan Karein</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="barcode-reader" style="width:100%;"></div>
+        <div class="small text-danger mt-2 d-none" id="barcodeScannerError"></div>
+        <div class="small text-muted mt-2">Camera ko barcode k saamne rakhein.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  window.openBarcodeScanner = function (onDetected) {
+    var modalEl = document.getElementById('barcodeScannerModal');
+    var errorEl = document.getElementById('barcodeScannerError');
+    if (!modalEl || typeof Html5Qrcode === 'undefined') return;
+    var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    var qr = new Html5Qrcode('barcode-reader', {
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.CODE_39,
+      ],
+      verbose: false,
+    });
+    var stopped = false;
+    function stopAndClose() {
+      if (stopped) return;
+      stopped = true;
+      qr.stop().catch(function () {});
+      modal.hide();
+    }
+    modalEl.addEventListener('hidden.bs.modal', function onHidden() {
+      modalEl.removeEventListener('hidden.bs.modal', onHidden);
+      stopped = true;
+      qr.stop().catch(function () {});
+    });
+    errorEl.classList.add('d-none');
+    modal.show();
+    qr.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 250, height: 150 } },
+      function (decodedText) {
+        stopAndClose();
+        onDetected(decodedText);
+      },
+      function () { /* per-frame decode miss, ignore */ }
+    ).catch(function (err) {
+      errorEl.textContent = 'Camera access nahi mil saka: ' + err;
+      errorEl.classList.remove('d-none');
+    });
+  };
+</script>
+{% endif %}
+
 {% block scripts %}{% endblock %}
 </body>
 </html>

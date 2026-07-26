@@ -5,9 +5,17 @@
 {% if from_po %}
 <div class="alert alert-info">Creating this purchase from Purchase Order #{{ from_po.order_no }}. Items below are pre-filled from the order's pending quantities.</div>
 {% endif %}
-<form method="post">
+
+{% if form.non_field_errors or formset.non_form_errors %}
+<div class="alert alert-danger">{{ form.non_field_errors }}{{ formset.non_form_errors }}</div>
+{% endif %}
+
+<form method="post" id="purchaseForm">
   {% csrf_token %}
+  {{ formset.management_form }}
   {% if from_po %}<input type="hidden" name="from_po" value="{{ from_po.pk }}">{% endif %}
+  <div id="itemInputs"></div>
+
   <div class="card card-stat p-4 mb-3">
     <div class="row">
     {% for field in form %}
@@ -21,44 +29,246 @@
   </div>
 
   <div class="card card-stat p-4 mb-3">
-    <h5>Items</h5>
-    {{ formset.management_form }}
-    {% if formset.non_form_errors %}<div class="text-danger">{{ formset.non_form_errors }}</div>{% endif %}
-    <table class="table" id="item-table">
-      <thead><tr><th>Product</th><th>Qty</th><th>Purchase Price</th><th>Batch # (optional)</th><th>Expiry Date</th><th>Delete</th></tr></thead>
-      <tbody id="item-body">
-      {% for f in formset %}
-        <tr class="item-row">
-          <td>{{ f.id }}{{ f.purchase_order_item_id }}{{ f.product }}{% if f.product.errors %}<div class="text-danger small">{{ f.product.errors }}</div>{% endif %}</td>
-          <td>{{ f.quantity }}{% if f.quantity.errors %}<div class="text-danger small">{{ f.quantity.errors }}</div>{% endif %}</td>
-          <td>{{ f.purchase_price }}{% if f.purchase_price.errors %}<div class="text-danger small">{{ f.purchase_price.errors }}</div>{% endif %}</td>
-          <td>{{ f.batch_number }}</td>
-          <td>{{ f.expiry_date }}</td>
-          <td>{% if f.instance.pk %}{{ f.DELETE }}{% endif %}</td>
-        </tr>
-        {% if f.non_field_errors %}<tr><td colspan="6" class="text-danger small">{{ f.non_field_errors }}</td></tr>{% endif %}
-      {% endfor %}
+    <h5 class="mb-2"><i class="bi bi-upc-scan"></i> Add Product</h5>
+    <div class="d-flex gap-2 mb-3">
+      <div class="position-relative flex-grow-1">
+        <input type="text" id="productSearch" class="form-control" placeholder="Product ka naam ya barcode type karein, Enter dabayein…" autocomplete="off">
+        <div id="productResults" class="search-dropdown d-none"></div>
+      </div>
+      <button type="button" class="btn btn-outline-primary" id="scanBarcodeBtn"><i class="bi bi-upc-scan"></i> Scan</button>
+    </div>
+
+    <div class="table-responsive">
+    <table class="table align-middle" id="billTable">
+      <thead><tr><th>Product</th><th>Qty</th><th>Purchase Price</th><th>Batch #</th><th>Expiry</th><th>Total</th><th></th></tr></thead>
+      <tbody id="billBody">
+        <tr id="emptyRow"><td colspan="7" class="text-center text-muted py-4">Abhi tak koi item add nahi hua.</td></tr>
       </tbody>
     </table>
-    <button type="button" id="add-row" class="btn btn-outline-secondary btn-sm">+ Add Row</button>
+    </div>
   </div>
 
   <button type="submit" class="btn btn-primary">Save Purchase</button>
 </form>
+
+{{ prefill_items|json_script:"prefill-items-data" }}
 {% endblock %}
 
 {% block scripts %}
 <script>
-document.getElementById('add-row').addEventListener('click', function () {
-  const totalForms = document.getElementById('id_items-TOTAL_FORMS');
-  const idx = parseInt(totalForms.value);
-  const rows = document.querySelectorAll('#item-body .item-row');
-  const lastRow = rows[rows.length - 1];
-  const newRow = lastRow.cloneNode(true);
-  newRow.innerHTML = newRow.innerHTML.replace(/items-(\d+)-/g, 'items-' + idx + '-');
-  newRow.querySelectorAll('input').forEach(el => { if (el.type !== 'checkbox') el.value = ''; else el.checked = false; });
-  document.getElementById('item-body').appendChild(newRow);
-  totalForms.value = idx + 1;
-});
+(function () {
+  const productSearchUrl = '{% url "purchases:purchase_product_search_api" %}';
+  const warehouseSelect = document.getElementById('id_warehouse');
+  const billBody = document.getElementById('billBody');
+
+  let cart = [];
+
+  function debounce(fn, delay) {
+    let t;
+    return function (...args) {
+      clearTimeout(t);
+      t = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
+
+  function fmt(n) {
+    return (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
+  }
+
+  function renderBillTable() {
+    billBody.innerHTML = '';
+    if (cart.length === 0) {
+      billBody.innerHTML = '<tr id="emptyRow"><td colspan="7" class="text-center text-muted py-4">Abhi tak koi item add nahi hua.</td></tr>';
+      return;
+    }
+    cart.forEach(function (item, i) {
+      const lineTotal = item.qty * item.price;
+      const row = document.createElement('tr');
+      row.dataset.idx = i;
+      row.innerHTML =
+        '<td>' + item.name + (item.unit ? ' <span class="text-muted small">(' + item.unit + ')</span>' : '') + '</td>' +
+        '<td><input type="number" class="form-control form-control-sm qty-input" min="0.01" step="0.01" value="' + item.qty + '"></td>' +
+        '<td><input type="number" class="form-control form-control-sm price-input" min="0" step="0.01" value="' + item.price + '"></td>' +
+        '<td><input type="text" class="form-control form-control-sm batch-input" value="' + (item.batch_number || '') + '"></td>' +
+        '<td><input type="date" class="form-control form-control-sm expiry-input" value="' + (item.expiry_date || '') + '"></td>' +
+        '<td class="fw-semibold line-total">' + fmt(lineTotal) + '</td>' +
+        '<td><button type="button" class="btn btn-sm btn-outline-danger remove-item"><i class="bi bi-x-lg"></i></button></td>';
+      billBody.appendChild(row);
+    });
+  }
+
+  billBody.addEventListener('input', function (e) {
+    const row = e.target.closest('tr');
+    if (!row) return;
+    const idx = parseInt(row.dataset.idx);
+    if (e.target.classList.contains('qty-input')) {
+      cart[idx].qty = parseFloat(e.target.value) || 0;
+    } else if (e.target.classList.contains('price-input')) {
+      cart[idx].price = parseFloat(e.target.value) || 0;
+    } else if (e.target.classList.contains('batch-input')) {
+      cart[idx].batch_number = e.target.value;
+    } else if (e.target.classList.contains('expiry-input')) {
+      cart[idx].expiry_date = e.target.value;
+    } else {
+      return;
+    }
+    row.querySelector('.line-total').textContent = fmt(cart[idx].qty * cart[idx].price);
+  });
+
+  billBody.addEventListener('click', function (e) {
+    const btn = e.target.closest('.remove-item');
+    if (!btn) return;
+    const row = btn.closest('tr');
+    cart.splice(parseInt(row.dataset.idx), 1);
+    renderBillTable();
+  });
+
+  function addProductToCart(p) {
+    const existing = cart.find(function (i) { return i.product_id === p.id && !i.purchase_order_item_id; });
+    if (existing) {
+      existing.qty += 1;
+    } else {
+      cart.push({
+        product_id: p.id,
+        name: p.name,
+        unit: p.unit,
+        price: parseFloat(p.price),
+        qty: 1,
+        batch_number: '',
+        expiry_date: '',
+        purchase_order_item_id: '',
+      });
+    }
+    renderBillTable();
+  }
+
+  // ---------- Product search ----------
+  const productSearch = document.getElementById('productSearch');
+  const productResults = document.getElementById('productResults');
+  let currentProductResults = [];
+
+  function renderProductResults(results) {
+    currentProductResults = results;
+    if (results.length === 0) {
+      productResults.innerHTML = '<div class="search-dropdown-empty">Koi product nahi mila.</div>';
+    } else {
+      productResults.innerHTML = results.map(function (p) {
+        return '<div class="search-dropdown-item" data-id="' + p.id + '">' +
+          '<div><div class="fw-semibold">' + p.name + '</div>' +
+          '<div class="text-muted small">' + (p.barcode || 'No barcode') + ' &middot; Stock: ' + p.stock + '</div></div>' +
+          '<div class="fw-semibold">' + p.price + '</div></div>';
+      }).join('');
+    }
+    productResults.classList.remove('d-none');
+  }
+
+  const doProductSearch = debounce(function (q) {
+    if (!q) { productResults.classList.add('d-none'); currentProductResults = []; return; }
+    const warehouseId = warehouseSelect ? warehouseSelect.value : '';
+    fetch(productSearchUrl + '?q=' + encodeURIComponent(q) + '&warehouse_id=' + encodeURIComponent(warehouseId))
+      .then(function (r) { return r.json(); })
+      .then(function (data) { renderProductResults(data.results); });
+  }, 250);
+
+  productSearch.addEventListener('input', function () { doProductSearch(this.value.trim()); });
+
+  function lookupAndAddByCode(code) {
+    const typed = code.trim();
+    if (!typed) return;
+    const warehouseId = warehouseSelect ? warehouseSelect.value : '';
+    fetch(productSearchUrl + '?q=' + encodeURIComponent(typed) + '&warehouse_id=' + encodeURIComponent(warehouseId))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        const results = data.results;
+        const exact = results.find(function (p) { return p.barcode && p.barcode.toLowerCase() === typed.toLowerCase(); });
+        if (exact) {
+          addProductToCart(exact);
+        } else if (results.length === 1) {
+          addProductToCart(results[0]);
+        }
+      });
+  }
+
+  productSearch.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const typed = this.value.trim();
+    if (!typed) return;
+    const exact = currentProductResults.find(function (p) { return p.barcode && p.barcode.toLowerCase() === typed.toLowerCase(); });
+    if (exact) {
+      addProductToCart(exact);
+    } else if (currentProductResults.length === 1) {
+      addProductToCart(currentProductResults[0]);
+    } else {
+      return;
+    }
+    this.value = '';
+    productResults.classList.add('d-none');
+    currentProductResults = [];
+    this.focus();
+  });
+
+  document.getElementById('scanBarcodeBtn').addEventListener('click', function () {
+    window.openBarcodeScanner(function (code) {
+      lookupAndAddByCode(code);
+    });
+  });
+
+  productResults.addEventListener('click', function (e) {
+    const item = e.target.closest('.search-dropdown-item');
+    if (!item) return;
+    const p = currentProductResults.find(function (r) { return String(r.id) === item.dataset.id; });
+    if (p) addProductToCart(p);
+    productSearch.value = '';
+    productResults.classList.add('d-none');
+    productSearch.focus();
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!productSearch.contains(e.target) && !productResults.contains(e.target)) {
+      productResults.classList.add('d-none');
+    }
+  });
+
+  // ---------- Submit ----------
+  document.getElementById('purchaseForm').addEventListener('submit', function (e) {
+    if (cart.length === 0) {
+      e.preventDefault();
+      alert('Purchase save karne se pehle kam az kam ek product add karein.');
+      return;
+    }
+    const container = document.getElementById('itemInputs');
+    container.innerHTML = '';
+    cart.forEach(function (item, i) {
+      container.insertAdjacentHTML('beforeend',
+        '<input type="hidden" name="items-' + i + '-product" value="' + item.product_id + '">' +
+        '<input type="hidden" name="items-' + i + '-quantity" value="' + item.qty + '">' +
+        '<input type="hidden" name="items-' + i + '-purchase_price" value="' + item.price + '">' +
+        '<input type="hidden" name="items-' + i + '-batch_number" value="' + (item.batch_number || '') + '">' +
+        '<input type="hidden" name="items-' + i + '-expiry_date" value="' + (item.expiry_date || '') + '">' +
+        '<input type="hidden" name="items-' + i + '-purchase_order_item_id" value="' + (item.purchase_order_item_id || '') + '">'
+      );
+    });
+    document.getElementById('id_items-TOTAL_FORMS').value = cart.length;
+  });
+
+  // ---------- Prefill (from_po, or after a validation error re-render) ----------
+  const prefillItems = JSON.parse(document.getElementById('prefill-items-data').textContent);
+  if (prefillItems && prefillItems.length) {
+    cart = prefillItems.map(function (it) {
+      return {
+        product_id: it.product_id,
+        name: it.name,
+        unit: it.unit,
+        price: parseFloat(it.price),
+        qty: parseFloat(it.qty),
+        batch_number: it.batch_number || '',
+        expiry_date: it.expiry_date || '',
+        purchase_order_item_id: it.purchase_order_item_id || '',
+      };
+    });
+    renderBillTable();
+  }
+})();
 </script>
 {% endblock %}

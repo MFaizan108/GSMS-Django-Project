@@ -69,9 +69,12 @@
       <!-- Product search + bill -->
       <div class="card card-stat p-3 mb-3">
         <h6 class="mb-2"><i class="bi bi-upc-scan"></i> Add Product</h6>
-        <div class="position-relative mb-3">
-          <input type="text" id="productSearch" class="form-control" placeholder="Product ka naam ya barcode type karein, Enter dabayein…" autocomplete="off">
-          <div id="productResults" class="search-dropdown d-none"></div>
+        <div class="d-flex gap-2 mb-3">
+          <div class="position-relative flex-grow-1">
+            <input type="text" id="productSearch" class="form-control" placeholder="Product ka naam ya barcode type karein, Enter dabayein…" autocomplete="off">
+            <div id="productResults" class="search-dropdown d-none"></div>
+          </div>
+          <button type="button" class="btn btn-outline-primary" id="scanBarcodeBtn"><i class="bi bi-upc-scan"></i> Scan</button>
         </div>
 
         <div class="table-responsive">
@@ -327,6 +330,23 @@
 
   productSearch.addEventListener('input', function () { doProductSearch(this.value.trim()); });
 
+  function lookupAndAddByCode(code) {
+    const typed = code.trim();
+    if (!typed) return;
+    const warehouseId = warehouseSelect ? warehouseSelect.value : '';
+    fetch(productSearchUrl + '?q=' + encodeURIComponent(typed) + '&warehouse_id=' + encodeURIComponent(warehouseId))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        const results = data.results;
+        const exact = results.find(function (p) { return p.barcode && p.barcode.toLowerCase() === typed.toLowerCase(); });
+        if (exact) {
+          addProductToCart(exact);
+        } else if (results.length === 1) {
+          addProductToCart(results[0]);
+        }
+      });
+  }
+
   productSearch.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter') return;
     e.preventDefault();
@@ -344,6 +364,12 @@
     productResults.classList.add('d-none');
     currentProductResults = [];
     this.focus();
+  });
+
+  document.getElementById('scanBarcodeBtn').addEventListener('click', function () {
+    window.openBarcodeScanner(function (code) {
+      lookupAndAddByCode(code);
+    });
   });
 
   productResults.addEventListener('click', function (e) {
