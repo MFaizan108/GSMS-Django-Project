@@ -25,11 +25,12 @@
       <tbody id="item-body">
       {% for f in formset %}
         <tr class="item-row">
-          <td>{{ f.id }}{{ f.product }}</td>
-          <td>{{ f.quantity }}</td>
-          <td>{{ f.expected_price }}</td>
+          <td>{{ f.id }}{{ f.product }}{% if f.product.errors %}<div class="text-danger small">{{ f.product.errors }}</div>{% endif %}</td>
+          <td>{{ f.quantity }}{% if f.quantity.errors %}<div class="text-danger small">{{ f.quantity.errors }}</div>{% endif %}</td>
+          <td>{{ f.expected_price }}{% if f.expected_price.errors %}<div class="text-danger small">{{ f.expected_price.errors }}</div>{% endif %}</td>
           <td>{% if f.instance.pk %}{{ f.DELETE }}{% endif %}</td>
         </tr>
+        {% if f.non_field_errors %}<tr><td colspan="4" class="text-danger small">{{ f.non_field_errors }}</td></tr>{% endif %}
       {% endfor %}
       </tbody>
     </table>

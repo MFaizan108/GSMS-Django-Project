@@ -23,6 +23,11 @@ def send_store_email(subject, body, to, attachments=None):
         username=store.smtp_username or None,
         password=store.smtp_password or None,
         use_tls=store.smtp_use_tls,
+        # Without this, a bad host/port or a blocked outbound port hangs on the
+        # OS-level TCP timeout (minutes) — long enough for gunicorn's own worker
+        # timeout to kill the request first, turning a catchable SMTP error into
+        # an opaque 500. Fail fast so the caller's try/except can handle it.
+        timeout=10,
     )
     message = EmailMessage(subject=subject, body=body, from_email=store.from_email, to=[to], connection=connection)
     for filename, content, mimetype in (attachments or []):
